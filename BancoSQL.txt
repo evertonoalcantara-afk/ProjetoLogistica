@@ -1,0 +1,81 @@
+﻿DROP DATABASE IF EXISTS projeto_logistica;
+CREATE DATABASE projeto_logistica
+    DEFAULT CHARACTER SET utf8mb4
+    DEFAULT COLLATE utf8mb4_general_ci;
+
+USE projeto_logistica;
+
+CREATE TABLE usuario (
+    usuarioID   INT PRIMARY KEY AUTO_INCREMENT,
+    login       VARCHAR(50)  NOT NULL UNIQUE,
+    senha       VARCHAR(100) NOT NULL,
+    perfil      VARCHAR(20)  NOT NULL DEFAULT 'Operador'
+);
+
+CREATE TABLE veiculo (
+    veiculoID       INT PRIMARY KEY AUTO_INCREMENT,
+    modelo          VARCHAR(100) NOT NULL,
+    placa           VARCHAR(7)   NOT NULL UNIQUE,
+    consumo_medio   DECIMAL(4,2) NOT NULL,
+    carga_maxima    DECIMAL(7,2)
+);
+
+CREATE TABLE motorista (
+    motoristaID INT PRIMARY KEY AUTO_INCREMENT,
+    nome        VARCHAR(100) NOT NULL,
+    cnh         VARCHAR(11)  NOT NULL UNIQUE,
+    telefone    VARCHAR(11)  NOT NULL,
+    cep         VARCHAR(9),
+    logradouro  VARCHAR(150),
+    bairro      VARCHAR(100),
+    cidade      VARCHAR(100),
+    uf          VARCHAR(2)
+);
+
+CREATE TABLE rota (
+    rotaID      INT PRIMARY KEY AUTO_INCREMENT,
+    origem      VARCHAR(100) NOT NULL,
+    destino     VARCHAR(150) NOT NULL,
+    distancia   DECIMAL(8,2) NOT NULL
+);
+
+CREATE TABLE preco_combustivel (
+    precoID         INT PRIMARY KEY AUTO_INCREMENT,
+    combustivel     VARCHAR(100) NOT NULL,
+    preco           DECIMAL(7,2) NOT NULL,
+    data_consulta   DATETIME     NOT NULL
+);
+
+CREATE TABLE viagem (
+    viagemID        INT PRIMARY KEY AUTO_INCREMENT,
+    veiculoID       INT NOT NULL,
+    motoristaID     INT NOT NULL,
+    rotaID          INT NOT NULL,
+    data_saida      DATETIME NOT NULL,
+    data_chegada    DATETIME NULL,
+    situacao        VARCHAR(30) NOT NULL,
+    custo_estimado  DECIMAL(10,2) DEFAULT 0,
+    FOREIGN KEY (veiculoID)   REFERENCES veiculo(veiculoID),
+    FOREIGN KEY (motoristaID) REFERENCES motorista(motoristaID),
+    FOREIGN KEY (rotaID)      REFERENCES rota(rotaID)
+);
+
+INSERT INTO usuario (login, senha, perfil) VALUES
+('admin', '123', 'Admin');
+
+INSERT INTO veiculo (modelo, placa, consumo_medio, carga_maxima) VALUES
+('Volvo FH 540',  'ABC1E23', 3.20, 45000.00),
+('Scania R450',   'XYZ4E56', 2.80, 42000.00),
+('Mercedes Actros', 'QWE7R89', 3.00, 40000.00);
+
+INSERT INTO motorista (nome, cnh, telefone) VALUES
+('Maria Oliveira', '12345678901', '11987654321'),
+('Pedro Santos',   '98765432109', '11912345678');
+
+INSERT INTO rota (origem, destino, distancia) VALUES
+('São Paulo - SP',    'Rio de Janeiro - RJ', 435.00),
+('Curitiba - PR',     'Porto Alegre - RS',   720.00),
+('Belo Horizonte - MG','Salvador - BA',      1370.00);
+
+INSERT INTO preco_combustivel (combustivel, preco, data_consulta) VALUES
+('Diesel S10', 6.25, NOW());

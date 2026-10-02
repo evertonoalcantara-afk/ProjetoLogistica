@@ -1,0 +1,316 @@
+﻿using System;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Windows.Forms;
+using MySqlConnector;
+
+namespace ProjetoLogistica
+{
+    // ============================================================
+    // ANOTAÇÃO:
+    // Tela de login. Agora o botão "Entrar" valida DE VERDADE
+    // consultando a tabela "usuario" do banco MySQL.
+    //
+    // Se o banco não estiver rodando (tipo no meu PC que não tem),
+    // ele mostra uma mensagem de erro amigável em vez de quebrar.
+    // ============================================================
+
+    public class FrmLogin : Form
+    {
+        private TextBox txtUsuario;
+        private TextBox txtSenha;
+        private Button btnEntrar;
+        private Button btnCadastrar;
+
+        public FrmLogin()
+        {
+            // ============================================================
+            // Configuração da janela
+            // ============================================================
+            this.Text = "Rota+ · Login";
+            this.ClientSize = new Size(900, 580);
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            this.MaximizeBox = false;
+            this.BackColor = Estilo.MentaBemClaro;
+            this.Font = new Font("Segoe UI", 10F);
+
+            // ============================================================
+            // PAINEL ESQUERDO (faixa índigo com a logo)
+            // ============================================================
+            Panel painelEsq = new Panel();
+            painelEsq.Dock = DockStyle.Left;
+            painelEsq.Width = 400;
+            painelEsq.BackColor = Estilo.Indigo;
+            this.Controls.Add(painelEsq);
+
+            // Desenha as bolhas direto no Paint (não vira quadrado)
+            painelEsq.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+                using (SolidBrush b = new SolidBrush(Estilo.Lilas))
+                    e.Graphics.FillEllipse(b, -70, -70, 200, 200);
+
+                using (SolidBrush b = new SolidBrush(Estilo.Menta))
+                    e.Graphics.FillEllipse(b, 320, 460, 160, 160);
+            };
+
+            // "Rota" em menta
+            Label lblRota = new Label();
+            lblRota.Text = "Rota";
+            lblRota.Font = new Font("Segoe UI Black", 56F);
+            lblRota.ForeColor = Estilo.Menta;
+            lblRota.AutoSize = true;
+            lblRota.Location = new Point(50, 115);
+            lblRota.BackColor = Color.Transparent;
+            painelEsq.Controls.Add(lblRota);
+
+            // "+" em lilás — aquele X=284 que a gente achou testando
+            Label lblMais = new Label();
+            lblMais.Text = "+";
+            lblMais.Font = new Font("Segoe UI Black", 48F);
+            lblMais.ForeColor = Estilo.Lilas;
+            lblMais.AutoSize = false;
+            lblMais.Size = new Size(70, 90);
+            lblMais.TextAlign = ContentAlignment.MiddleCenter;
+            lblMais.Location = new Point(240, 115);
+            lblMais.BackColor = Color.Transparent;
+            painelEsq.Controls.Add(lblMais);
+            lblMais.BringToFront(); // garante que fica na frente
+
+            // Subtítulo
+            Label lblSub = new Label();
+            lblSub.Text = "Sistema de\nGerenciamento\nLogístico";
+            lblSub.Font = new Font("Segoe UI Semibold", 20F);
+            lblSub.ForeColor = Color.White;
+            lblSub.AutoSize = true;
+            lblSub.Location = new Point(50, 240);
+            lblSub.BackColor = Color.Transparent;
+            painelEsq.Controls.Add(lblSub);
+
+            // Slogan
+            Label lblSlogan = new Label();
+            lblSlogan.Text = "🚚  Rastreie. Analise. Entregue.";
+            lblSlogan.Font = new Font("Segoe UI", 11F);
+            lblSlogan.ForeColor = Estilo.LilasBemClaro;
+            lblSlogan.AutoSize = true;
+            lblSlogan.Location = new Point(50, 400);
+            lblSlogan.BackColor = Color.Transparent;
+            painelEsq.Controls.Add(lblSlogan);
+
+            // Rodapé
+            Label lblCopy = new Label();
+            lblCopy.Text = "© 2026 · Rota+";
+            lblCopy.Font = new Font("Segoe UI", 9F);
+            lblCopy.ForeColor = Estilo.LilasBemClaro;
+            lblCopy.AutoSize = true;
+            lblCopy.Location = new Point(50, 530);
+            lblCopy.BackColor = Color.Transparent;
+            painelEsq.Controls.Add(lblCopy);
+
+            // ============================================================
+            // CARD DE LOGIN (lado direito)
+            // ============================================================
+            Panel card = new Panel();
+            card.Size = new Size(400, 430);
+            card.Location = new Point(465, 75);
+            card.BackColor = Color.White;
+            this.Controls.Add(card);
+
+            card.Paint += (s, e) =>
+            {
+                Rectangle r = card.ClientRectangle;
+                r.Width -= 1;
+                r.Height -= 1;
+                using (Pen caneta = new Pen(Estilo.LilasClaro, 1))
+                    e.Graphics.DrawRectangle(caneta, r);
+            };
+
+            // Título do card
+            Label lblBoasVindas = new Label();
+            lblBoasVindas.Text = "Bem-vindo(a) 👋";
+            lblBoasVindas.Font = new Font("Segoe UI Semibold", 22F);
+            lblBoasVindas.ForeColor = Estilo.IndigoEscuro;
+            lblBoasVindas.AutoSize = true;
+            lblBoasVindas.Location = new Point(40, 35);
+            card.Controls.Add(lblBoasVindas);
+
+            Label lblInstrucao = new Label();
+            lblInstrucao.Text = "Entre com suas credenciais para continuar";
+            lblInstrucao.Font = new Font("Segoe UI", 10F);
+            lblInstrucao.ForeColor = Estilo.TextoEscuro;
+            lblInstrucao.AutoSize = true;
+            lblInstrucao.Location = new Point(40, 83);
+            card.Controls.Add(lblInstrucao);
+
+            // ----- USUÁRIO -----
+            Label lblUsuario = new Label();
+            lblUsuario.Text = "Usuário";
+            lblUsuario.Font = new Font("Segoe UI Semibold", 10F);
+            lblUsuario.ForeColor = Estilo.TextoEscuro;
+            lblUsuario.AutoSize = true;
+            lblUsuario.Location = new Point(40, 135);
+            card.Controls.Add(lblUsuario);
+
+            txtUsuario = new TextBox();
+            txtUsuario.Location = new Point(40, 160);
+            txtUsuario.Width = 320;
+            Estilo.TextBox(txtUsuario);
+            card.Controls.Add(txtUsuario);
+
+            // ----- SENHA -----
+            Label lblSenha = new Label();
+            lblSenha.Text = "Senha";
+            lblSenha.Font = new Font("Segoe UI Semibold", 10F);
+            lblSenha.ForeColor = Estilo.TextoEscuro;
+            lblSenha.AutoSize = true;
+            lblSenha.Location = new Point(40, 210);
+            card.Controls.Add(lblSenha);
+
+            txtSenha = new TextBox();
+            txtSenha.Location = new Point(40, 235);
+            txtSenha.Width = 320;
+            txtSenha.UseSystemPasswordChar = true;
+            Estilo.TextBox(txtSenha);
+            card.Controls.Add(txtSenha);
+
+            // ----- BOTÃO ENTRAR -----
+            btnEntrar = new Button();
+            btnEntrar.Text = "Entrar";
+            btnEntrar.Location = new Point(40, 295);
+            btnEntrar.Width = 320;
+            btnEntrar.TextAlign = ContentAlignment.MiddleCenter;
+            Estilo.Botao(btnEntrar, Estilo.Indigo);
+            btnEntrar.Click += BtnEntrar_Click;
+            card.Controls.Add(btnEntrar);
+
+            // ----- BOTÃO CRIAR CONTA -----
+            btnCadastrar = new Button();
+            btnCadastrar.Text = "Criar nova conta";
+            btnCadastrar.Location = new Point(40, 345);
+            btnCadastrar.Width = 320;
+            btnCadastrar.Height = 34;
+            btnCadastrar.FlatStyle = FlatStyle.Flat;
+            btnCadastrar.BackColor = Color.Transparent;
+            btnCadastrar.ForeColor = Estilo.LilasEscuro;
+            btnCadastrar.Font = new Font("Segoe UI Semibold", 10F);
+            btnCadastrar.Cursor = Cursors.Hand;
+            btnCadastrar.FlatAppearance.BorderSize = 0;
+            btnCadastrar.FlatAppearance.MouseOverBackColor = Estilo.LilasBemClaro;
+            btnCadastrar.Click += BtnCadastrar_Click;
+            card.Controls.Add(btnCadastrar);
+
+            // Dica embaixo
+            Label lblDica = new Label();
+            lblDica.Text = "admin / 123 (quando o banco tiver rodando)";
+            lblDica.Font = new Font("Segoe UI", 9F, FontStyle.Italic);
+            lblDica.ForeColor = Color.Gray;
+            lblDica.AutoSize = true;
+            lblDica.Location = new Point(40, 388);
+            card.Controls.Add(lblDica);
+
+            this.AcceptButton = btnEntrar;
+        }
+
+        // ============================================================
+        // CLIQUE DO BOTÃO ENTRAR
+        // ============================================================
+        private void BtnEntrar_Click(object? sender, EventArgs e)
+        {
+            // ----- Validação básica: preencheu os dois campos? -----
+            if (string.IsNullOrWhiteSpace(txtUsuario.Text) ||
+                string.IsNullOrWhiteSpace(txtSenha.Text))
+            {
+                MessageBox.Show("Preencha usuário e senha, por favor!",
+                    "Atenção",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            // ----- Tenta conectar no banco e validar -----
+            try
+            {
+                using (MySqlConnection conn = Conexao.Abrir())
+                {
+                    // ANOTAÇÃO: uso parâmetros (@login, @senha) em vez de
+                    // colar o texto direto na SQL. Isso evita "SQL Injection",
+                    // que é tipo quando alguém digita código malicioso no
+                    // campo e o banco executa. Coisa de profissional. 😎
+                    string sql = "SELECT perfil FROM usuario WHERE login = @login AND senha = @senha";
+
+                    using (MySqlCommand cmd = new MySqlCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@login", txtUsuario.Text.Trim());
+                        cmd.Parameters.AddWithValue("@senha", txtSenha.Text);
+
+                        object resultado = cmd.ExecuteScalar();
+
+                        if (resultado != null)
+                        {
+                            // Achou o usuário! Guarda o perfil e abre a tela principal
+                            string perfil = resultado.ToString();
+
+                            // (isso aqui vai ser útil na Fase 3, quando a gente
+                            // fizer perfis de acesso diferentes)
+                            // Session.Usuario = txtUsuario.Text.Trim();
+                            // Session.Perfil = perfil;
+
+                            this.Hide();
+                            FrmPrincipal tela = new FrmPrincipal();
+                            tela.ShowDialog();
+                            this.Close();
+                        }
+                        else
+                        {
+                            MessageBox.Show("Usuário ou senha inválidos.",
+                                "Erro de login",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Error);
+
+                            txtSenha.Clear();
+                            txtSenha.Focus();
+                        }
+                    }
+                }
+            }
+            catch (MySqlException ex)
+            {
+                // ANOTAÇÃO: se o banco não tiver rodando (tipo agora no meu PC),
+                // cai aqui. Aí mostro uma mensagem explicando o que fazer.
+                MessageBox.Show(
+                    "Não consegui conectar no banco de dados. 😕\n\n" +
+                    "Verifica se:\n" +
+                    "• O MySQL tá instalado e rodando\n" +
+                    "• A senha no appsettings.json tá certa\n" +
+                    "• O banco 'projeto_logistica' já foi criado\n\n" +
+                    "Se o problema continuar, chama o suporte! 📞",
+                    "Erro de conexão",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Deu um erro inesperado:\n\n" + ex.Message,
+                    "Erro",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        // ============================================================
+        // CLIQUE DO BOTÃO CRIAR CONTA
+        // ============================================================
+        private void BtnCadastrar_Click(object? sender, EventArgs e)
+        {
+            // Por enquanto só avisa. Quando a gente chegar na Fase 3
+            // (segurança), essa tela vai virar um formulário de verdade.
+            MessageBox.Show(
+                "Em breve! Essa tela vai cadastrar novos usuários no sistema.",
+                "Em construção",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+    }
+}
