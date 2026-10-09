@@ -8,11 +8,8 @@ namespace ProjetoLogistica
 {
     // ============================================================
     // ANOTAÇÃO:
-    // Tela de login. Agora o botão "Entrar" valida DE VERDADE
-    // consultando a tabela "usuario" do banco MySQL.
-    //
-    // Se o banco não estiver rodando (tipo no meu PC que não tem),
-    // ele mostra uma mensagem de erro amigável em vez de quebrar.
+    // Tela de login. Valida usuário/senha com hash SHA256,
+    // bloqueia após 5 tentativas erradas e registra tudo no Log.
     // ============================================================
 
     public class FrmLogin : Form
@@ -24,9 +21,6 @@ namespace ProjetoLogistica
 
         public FrmLogin()
         {
-            // ============================================================
-            // Configuração da janela
-            // ============================================================
             this.Text = "Rota+ · Login";
             this.ClientSize = new Size(900, 580);
             this.StartPosition = FormStartPosition.CenterScreen;
@@ -36,7 +30,7 @@ namespace ProjetoLogistica
             this.Font = new Font("Segoe UI", 10F);
 
             // ============================================================
-            // PAINEL ESQUERDO (faixa índigo com a logo)
+            // PAINEL ESQUERDO
             // ============================================================
             Panel painelEsq = new Panel();
             painelEsq.Dock = DockStyle.Left;
@@ -44,19 +38,15 @@ namespace ProjetoLogistica
             painelEsq.BackColor = Estilo.Indigo;
             this.Controls.Add(painelEsq);
 
-            // Desenha as bolhas direto no Paint (não vira quadrado)
             painelEsq.Paint += (s, e) =>
             {
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-
                 using (SolidBrush b = new SolidBrush(Estilo.Lilas))
                     e.Graphics.FillEllipse(b, -70, -70, 200, 200);
-
                 using (SolidBrush b = new SolidBrush(Estilo.Menta))
                     e.Graphics.FillEllipse(b, 320, 460, 160, 160);
             };
 
-            // "Rota" em menta
             Label lblRota = new Label();
             lblRota.Text = "Rota";
             lblRota.Font = new Font("Segoe UI Black", 56F);
@@ -66,7 +56,6 @@ namespace ProjetoLogistica
             lblRota.BackColor = Color.Transparent;
             painelEsq.Controls.Add(lblRota);
 
-            // "+" em lilás — aquele X=284 que a gente achou testando
             Label lblMais = new Label();
             lblMais.Text = "+";
             lblMais.Font = new Font("Segoe UI Black", 48F);
@@ -77,9 +66,8 @@ namespace ProjetoLogistica
             lblMais.Location = new Point(240, 115);
             lblMais.BackColor = Color.Transparent;
             painelEsq.Controls.Add(lblMais);
-            lblMais.BringToFront(); // garante que fica na frente
+            lblMais.BringToFront();
 
-            // Subtítulo
             Label lblSub = new Label();
             lblSub.Text = "Sistema de\nGerenciamento\nLogístico";
             lblSub.Font = new Font("Segoe UI Semibold", 20F);
@@ -89,7 +77,6 @@ namespace ProjetoLogistica
             lblSub.BackColor = Color.Transparent;
             painelEsq.Controls.Add(lblSub);
 
-            // Slogan
             Label lblSlogan = new Label();
             lblSlogan.Text = "🚚  Rastreie. Analise. Entregue.";
             lblSlogan.Font = new Font("Segoe UI", 11F);
@@ -99,7 +86,6 @@ namespace ProjetoLogistica
             lblSlogan.BackColor = Color.Transparent;
             painelEsq.Controls.Add(lblSlogan);
 
-            // Rodapé
             Label lblCopy = new Label();
             lblCopy.Text = "© 2026 · Rota+";
             lblCopy.Font = new Font("Segoe UI", 9F);
@@ -110,7 +96,7 @@ namespace ProjetoLogistica
             painelEsq.Controls.Add(lblCopy);
 
             // ============================================================
-            // CARD DE LOGIN (lado direito)
+            // CARD DE LOGIN
             // ============================================================
             Panel card = new Panel();
             card.Size = new Size(400, 430);
@@ -127,7 +113,6 @@ namespace ProjetoLogistica
                     e.Graphics.DrawRectangle(caneta, r);
             };
 
-            // Título do card
             Label lblBoasVindas = new Label();
             lblBoasVindas.Text = "Bem-vindo(a) 👋";
             lblBoasVindas.Font = new Font("Segoe UI Semibold", 22F);
@@ -144,7 +129,6 @@ namespace ProjetoLogistica
             lblInstrucao.Location = new Point(40, 83);
             card.Controls.Add(lblInstrucao);
 
-            // ----- USUÁRIO -----
             Label lblUsuario = new Label();
             lblUsuario.Text = "Usuário";
             lblUsuario.Font = new Font("Segoe UI Semibold", 10F);
@@ -159,7 +143,6 @@ namespace ProjetoLogistica
             Estilo.TextBox(txtUsuario);
             card.Controls.Add(txtUsuario);
 
-            // ----- SENHA -----
             Label lblSenha = new Label();
             lblSenha.Text = "Senha";
             lblSenha.Font = new Font("Segoe UI Semibold", 10F);
@@ -175,7 +158,6 @@ namespace ProjetoLogistica
             Estilo.TextBox(txtSenha);
             card.Controls.Add(txtSenha);
 
-            // ----- BOTÃO ENTRAR -----
             btnEntrar = new Button();
             btnEntrar.Text = "Entrar";
             btnEntrar.Location = new Point(40, 295);
@@ -185,7 +167,6 @@ namespace ProjetoLogistica
             btnEntrar.Click += BtnEntrar_Click;
             card.Controls.Add(btnEntrar);
 
-            // ----- BOTÃO CRIAR CONTA -----
             btnCadastrar = new Button();
             btnCadastrar.Text = "Criar nova conta";
             btnCadastrar.Location = new Point(40, 345);
@@ -201,9 +182,8 @@ namespace ProjetoLogistica
             btnCadastrar.Click += BtnCadastrar_Click;
             card.Controls.Add(btnCadastrar);
 
-            // Dica embaixo
             Label lblDica = new Label();
-            lblDica.Text = "admin / 123 (quando o banco tiver rodando)";
+            lblDica.Text = "admin / 123";
             lblDica.Font = new Font("Segoe UI", 9F, FontStyle.Italic);
             lblDica.ForeColor = Color.Gray;
             lblDica.AutoSize = true;
@@ -214,71 +194,149 @@ namespace ProjetoLogistica
         }
 
         // ============================================================
-        // CLIQUE DO BOTÃO ENTRAR
+        // BOTÃO ENTRAR (com hash + bloqueio + log)
         // ============================================================
-        private void BtnEntrar_Click(object? sender, EventArgs e)
+        private void BtnEntrar_Click(object sender, EventArgs e)
         {
-            // ----- Validação básica: preencheu os dois campos? -----
             if (string.IsNullOrWhiteSpace(txtUsuario.Text) ||
                 string.IsNullOrWhiteSpace(txtSenha.Text))
             {
-                MessageBox.Show("Preencha usuário e senha, por favor!",
-                    "Atenção",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
+                MessageBox.Show("Preencha usuário e senha.", "Atenção",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // ----- Tenta conectar no banco e validar -----
+            string loginDigitado = txtUsuario.Text.Trim();
+
+            // Registra a tentativa no log
+            Log.Info("Tentativa de login: " + loginDigitado);
+
             try
             {
                 using (MySqlConnection conn = Conexao.Abrir())
                 {
-                    // ANOTAÇÃO: uso parâmetros (@login, @senha) em vez de
-                    // colar o texto direto na SQL. Isso evita "SQL Injection",
-                    // que é tipo quando alguém digita código malicioso no
-                    // campo e o banco executa. Coisa de profissional. 😎
-                    string sql = "SELECT perfil FROM usuario WHERE login = @login AND senha = @senha";
+                    string sql = @"SELECT usuarioID, senha, perfil, tentativas, bloqueado_ate 
+                                   FROM usuario 
+                                   WHERE login = @login";
+
+                    int id = 0;
+                    string hashDoBanco = null;
+                    string perfil = null;
+                    int tentativas = 0;
+                    DateTime? bloqueadoAte = null;
 
                     using (MySqlCommand cmd = new MySqlCommand(sql, conn))
                     {
-                        cmd.Parameters.AddWithValue("@login", txtUsuario.Text.Trim());
-                        cmd.Parameters.AddWithValue("@senha", txtSenha.Text);
+                        cmd.Parameters.AddWithValue("@login", loginDigitado);
 
-                        object resultado = cmd.ExecuteScalar();
-
-                        if (resultado != null)
+                        using (MySqlDataReader rd = cmd.ExecuteReader())
                         {
-                            // Achou o usuário! Guarda o perfil e abre a tela principal
-                            string perfil = resultado.ToString();
+                            if (!rd.Read())
+                            {
+                                Log.Info("Login falhou: usuário inexistente '" + loginDigitado + "'");
+                                MessageBox.Show("Usuário ou senha inválidos.", "Erro de login",
+                                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                return;
+                            }
 
-                            // (isso aqui vai ser útil na Fase 3, quando a gente
-                            // fizer perfis de acesso diferentes)
-                            // Session.Usuario = txtUsuario.Text.Trim();
-                            // Session.Perfil = perfil;
+                            id = rd.GetInt32("usuarioID");
+                            hashDoBanco = rd.GetString("senha");
+                            perfil = rd.GetString("perfil");
+                            tentativas = rd.GetInt32("tentativas");
 
-                            this.Hide();
-                            FrmPrincipal tela = new FrmPrincipal();
-                            tela.ShowDialog();
-                            this.Close();
-                        }
-                        else
-                        {
-                            MessageBox.Show("Usuário ou senha inválidos.",
-                                "Erro de login",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Error);
-
-                            txtSenha.Clear();
-                            txtSenha.Focus();
+                            if (!rd.IsDBNull(rd.GetOrdinal("bloqueado_ate")))
+                                bloqueadoAte = rd.GetDateTime("bloqueado_ate");
                         }
                     }
+
+                    // Tá bloqueado ainda?
+                    if (bloqueadoAte != null && bloqueadoAte.Value > DateTime.Now)
+                    {
+                        int minutosRestantes = (int)(bloqueadoAte.Value - DateTime.Now).TotalMinutes;
+                        if (minutosRestantes < 1) minutosRestantes = 1;
+
+                        Log.Erro("Login bloqueado: " + loginDigitado +
+                                 " (faltam " + minutosRestantes + " min)");
+
+                        MessageBox.Show(
+                            "Usuário bloqueado por tentativas erradas.\n" +
+                            "Tente novamente em " + minutosRestantes + " minuto(s).",
+                            "Bloqueado",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    // Senha confere?
+                    if (Security.SenhaConfere(txtSenha.Text, hashDoBanco))
+                    {
+                        // Zera tentativas
+                        using (MySqlCommand cmdReset = new MySqlCommand(
+                            "UPDATE usuario SET tentativas = 0, bloqueado_ate = NULL WHERE usuarioID = @id", conn))
+                        {
+                            cmdReset.Parameters.AddWithValue("@id", id);
+                            cmdReset.ExecuteNonQuery();
+                        }
+
+                        Log.Info("Login OK: " + loginDigitado + " (" + perfil + ")");
+
+                        this.Hide();
+                        FrmPrincipal tela = new FrmPrincipal();
+                        tela.ShowDialog();
+                        this.Close();
+                        return;
+                    }
+
+                    // Senha errada: aumenta tentativa
+                    tentativas++;
+
+                    if (tentativas >= 5)
+                    {
+                        using (MySqlCommand cmdBloq = new MySqlCommand(
+                            "UPDATE usuario SET tentativas = 0, bloqueado_ate = @bloq WHERE usuarioID = @id", conn))
+                        {
+                            cmdBloq.Parameters.AddWithValue("@bloq", DateTime.Now.AddMinutes(15));
+                            cmdBloq.Parameters.AddWithValue("@id", id);
+                            cmdBloq.ExecuteNonQuery();
+                        }
+
+                        Log.Erro("Usuário " + loginDigitado + " bloqueado após 5 tentativas");
+
+                        MessageBox.Show(
+                            "Muitas tentativas erradas!\n" +
+                            "Usuário bloqueado por 15 minutos.",
+                            "Bloqueado",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                    else
+                    {
+                        using (MySqlCommand cmdUp = new MySqlCommand(
+                            "UPDATE usuario SET tentativas = @t WHERE usuarioID = @id", conn))
+                        {
+                            cmdUp.Parameters.AddWithValue("@t", tentativas);
+                            cmdUp.Parameters.AddWithValue("@id", id);
+                            cmdUp.ExecuteNonQuery();
+                        }
+
+                        int restantes = 5 - tentativas;
+
+                        Log.Info("Senha incorreta para '" + loginDigitado +
+                                 "' (tentativa " + tentativas + "/5)");
+
+                        MessageBox.Show(
+                            "Usuário ou senha inválidos.\n" +
+                            "Restam " + restantes + " tentativa(s) antes do bloqueio.",
+                            "Erro de login",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+
+                    txtSenha.Clear();
+                    txtSenha.Focus();
                 }
             }
             catch (MySqlException ex)
             {
-                // ANOTAÇÃO: se o banco não tiver rodando (tipo agora no meu PC),
-                // cai aqui. Aí mostro uma mensagem explicando o que fazer.
+                Log.Erro("Erro de conexão no login", ex);
+
                 MessageBox.Show(
                     "Não consegui conectar no banco de dados. 😕\n\n" +
                     "Verifica se:\n" +
@@ -287,30 +345,23 @@ namespace ProjetoLogistica
                     "• O banco 'projeto_logistica' já foi criado\n\n" +
                     "Se o problema continuar, chama o suporte! 📞",
                     "Erro de conexão",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Deu um erro inesperado:\n\n" + ex.Message,
-                    "Erro",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
+                Log.Erro("Erro inesperado no login", ex);
+                MessageBox.Show("Erro inesperado:\n\n" + ex.Message,
+                    "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         // ============================================================
-        // CLIQUE DO BOTÃO CRIAR CONTA
+        // BOTÃO CADASTRAR
         // ============================================================
-        private void BtnCadastrar_Click(object? sender, EventArgs e)
+        private void BtnCadastrar_Click(object sender, EventArgs e)
         {
-            // Por enquanto só avisa. Quando a gente chegar na Fase 3
-            // (segurança), essa tela vai virar um formulário de verdade.
-            MessageBox.Show(
-                "Em breve! Essa tela vai cadastrar novos usuários no sistema.",
-                "Em construção",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+            FrmCadastro tela = new FrmCadastro();
+            tela.ShowDialog();
         }
     }
 }

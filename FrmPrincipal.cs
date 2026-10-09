@@ -398,7 +398,7 @@ namespace ProjetoLogistica
                     // ANOTAÇÃO: uso parâmetros (@modelo, @placa...) em vez de
                     // concatenar strings. Isso evita SQL Injection, que é
                     // quando alguém digita código malicioso no campo.
-                    // A professora de segurança ia gostar disso.
+                    
                     string sql = @"INSERT INTO veiculo 
                                    (modelo, placa, consumo_medio, carga_maxima)
                                    VALUES (@modelo, @placa, @consumo, @carga)";
