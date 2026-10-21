@@ -2,25 +2,21 @@
 {
     // ============================================================
     // ANOTAÇÃO:
-    // Guarda as informações do usuário que tá logado no momento.
-    // Assim qualquer tela do sistema consegue saber "quem tá usando".
+    // Guarda quem tá logado no sistema. Como é "static", os dados
+    // ficam disponíveis em qualquer tela sem precisar passar
+    // por parâmetro em cada método.
     //
-    // Serve pra:
-    //   - Mostrar o nome do usuário no menu superior
-    //   - Esconder botões que só Admin pode ver
-    //   - Registrar no log quem fez cada ação
+    // Uso:
+    //   Session.Usuario = "admin";
+    //   Session.Perfil  = "Admin";
+    //   if (Session.IsAdmin) { ... }
     // ============================================================
 
     public static class Session
     {
-        // Login do usuário logado (ex: "admin", "joao")
         public static string Usuario { get; set; } = "";
-
-        // Perfil: "Admin" ou "Operador"
         public static string Perfil { get; set; } = "Operador";
 
-        // Atalho pra saber se é Admin (facilita muito no código)
-        // Uso: if (Session.IsAdmin) { ... }
         public static bool IsAdmin
         {
             get { return Perfil == "Admin"; }

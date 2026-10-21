@@ -78,5 +78,7 @@ namespace ProjetoLogistica
         public const string Home = "\uE80F"; // 🏠 casa
         public const string Back = "\uE72B"; // ⬅️ voltar
         public const string Busca = "\uE721"; // 🔍 lupa (mesmo do pesquisar)
+        public const string Csv = "\uE9D9";
+        public const string Pdf = "\uE8A5";
     }
 }

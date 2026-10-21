@@ -92,12 +92,21 @@ namespace ProjetoLogistica
         private DataGridView gridVia;
 
         // ============================================================
-        // CAMPOS DA ABA CONSULTAR VIAGEM
+        // CAMPOS DA ABA CONSULTA / MONITORAMENTO
         // ============================================================
-        private ComboBox cmbFilStatus;
-        private DateTimePicker dtpFilDe;
-        private DateTimePicker dtpFilAte;
+        private ComboBox cmbFiltroStatus;
+        private DateTimePicker dtpFiltroDe;
+        private DateTimePicker dtpFiltroAte;
         private DataGridView gridConsulta;
+
+        // ============================================================
+        // CAMPOS DO DASHBOARD (KPIs)
+        // ============================================================
+        private Label lblKpiViagens;
+        private Label lblKpiEmAndamento;
+        private Label lblKpiCusto;
+        private Label lblKpiMotoristas;
+        private Label lblKpiVeiculos;
 
         public FrmPrincipal()
         {
@@ -148,10 +157,13 @@ namespace ProjetoLogistica
             menuArquivo.DropDownItems.Add(menuSair);
             menu.Items.Add(menuArquivo);
 
-            ToolStripMenuItem itemUsuario = new ToolStripMenuItem("👤  Administrador");
-            itemUsuario.ForeColor = Estilo.Menta;
+            // ANOTAÇÃO: usei ToolStripLabel em vez de MenuItem porque o MenuItem
+            // com Enabled=false força o texto a ficar cinza no Windows.
+            // O Label respeita a cor que a gente escolhe. 
+            ToolStripLabel itemUsuario = new ToolStripLabel("👤  " + Session.Usuario + "  ·  " + Session.Perfil);
+            itemUsuario.ForeColor = Color.White;  // Branco puro pra dar contraste
+            itemUsuario.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);  // Negrito
             itemUsuario.Alignment = ToolStripItemAlignment.Right;
-            itemUsuario.Enabled = false;
             menu.Items.Add(itemUsuario);
 
             this.MainMenuStrip = menu;
@@ -175,6 +187,7 @@ namespace ProjetoLogistica
             abas.DrawMode = TabDrawMode.OwnerDrawFixed;
             abas.DrawItem += Abas_DrawItem;
 
+            abas.TabPages.Add(CriarAbaDashboard());
             abas.TabPages.Add(CriarAbaVeiculo());
             abas.TabPages.Add(CriarAbaMotorista());
             abas.TabPages.Add(CriarAbaRota());
@@ -240,7 +253,7 @@ namespace ProjetoLogistica
                 botao.Font = new Font("Segoe UI Semibold", 10F);
                 botao.ForeColor = Estilo.TextoEscuro;
                 botao.AutoSize = false;
-                botao.Width = 120;
+                botao.Width = 105; // Deixei menor pra caberem 7 botões na tela
                 botao.Height = 34;
                 botao.Margin = new Padding(4, 0, 4, 0);
 
@@ -306,11 +319,261 @@ namespace ProjetoLogistica
                 MessageBoxIcon.Information);
         }
 
+
+        // ============================================================
+        // ANOTAÇÃO:
+        // Verifica se o usuário logado pode excluir.
+        // Se não puder, mostra uma mensagem e devolve false.
+        //
+        // Assim a gente não repete essa checagem em cada método Excluir.
+        // ============================================================
+        private bool PodeExcluir()
+        {
+            if (!Session.IsAdmin)
+            {
+                Log.Info("Tentativa de exclusão negada para " + Session.Usuario);
+
+                MessageBox.Show(
+                    "Só administradores podem excluir registros.\n\n" +
+                    "Seu perfil é: " + Session.Perfil,
+                    "Acesso negado",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return false;
+            }
+            return true;
+        }
+
+        // ============================================================
+        // ═══════════════════ ABA DASHBOARD ═════════════════════════
+        // ============================================================
+        // ANOTAÇÃO:
+        // Essa aba é só leitura. Ela mostra os números do sistema
+        // em cards coloridos. Os dados vêm direto do banco.
+        // ============================================================
+        private TabPage CriarAbaDashboard()
+        {
+            TabPage pagina = NovaAba("Dashboard");
+
+            // ============================================================
+            // 1. CARDS DE KPIs (em cima)
+            // ============================================================
+            Panel painelKpis = new Panel();
+            painelKpis.Dock = DockStyle.Top;
+            painelKpis.Height = 150;
+            painelKpis.BackColor = Estilo.MentaBemClaro;
+            painelKpis.Padding = new Padding(10);
+
+            lblKpiViagens = CriarCard(painelKpis, "🚚 Viagens", "0", Estilo.Indigo, 20);
+            lblKpiEmAndamento = CriarCard(painelKpis, "⏳ Em Andamento", "0", Estilo.Lilas, 250);
+            lblKpiCusto = CriarCard(painelKpis, "💰 Custo Total", "R$ 0", Estilo.MentaEscuro, 480);
+            lblKpiMotoristas = CriarCard(painelKpis, "👤 Motoristas", "0", Estilo.IndigoEscuro, 710);
+            lblKpiVeiculos = CriarCard(painelKpis, "🚛 Veículos", "0", Estilo.LilasEscuro, 940);
+
+            // ============================================================
+            // 2. ÁREA DOS GRÁFICOS (embaixo)
+            // ============================================================
+            // TableLayoutPanel divide o espaço em 2 colunas iguais
+            TableLayoutPanel painelGraficos = new TableLayoutPanel();
+            painelGraficos.Dock = DockStyle.Fill;
+            painelGraficos.ColumnCount = 2;
+            painelGraficos.RowCount = 1;
+            painelGraficos.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            painelGraficos.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            painelGraficos.Padding = new Padding(10);
+
+            // Card do Gráfico de Pizza
+            Panel cardPizza = new Panel();
+            cardPizza.Dock = DockStyle.Fill;
+            cardPizza.BackColor = Color.White;
+            cardPizza.Margin = new Padding(5);
+
+            Label lblTituloPizza = new Label();
+            lblTituloPizza.Text = "Viagens por Situação";
+            lblTituloPizza.Font = new Font("Segoe UI Semibold", 12F);
+            lblTituloPizza.ForeColor = Estilo.IndigoEscuro;
+            lblTituloPizza.Dock = DockStyle.Top;
+            lblTituloPizza.Height = 30;
+            lblTituloPizza.TextAlign = ContentAlignment.MiddleCenter;
+
+            GraficoPizza graficoPizza = new GraficoPizza();
+            graficoPizza.Dock = DockStyle.Fill;
+            graficoPizza.Name = "graficoPizza"; // Nome pra achar depois
+
+            cardPizza.Controls.Add(graficoPizza);
+            cardPizza.Controls.Add(lblTituloPizza);
+
+            // Card do Gráfico de Barras
+            Panel cardBarra = new Panel();
+            cardBarra.Dock = DockStyle.Fill;
+            cardBarra.BackColor = Color.White;
+            cardBarra.Margin = new Padding(5);
+
+            Label lblTituloBarra = new Label();
+            lblTituloBarra.Text = "Viagens nos Últimos 6 Meses";
+            lblTituloBarra.Font = new Font("Segoe UI Semibold", 12F);
+            lblTituloBarra.ForeColor = Estilo.IndigoEscuro;
+            lblTituloBarra.Dock = DockStyle.Top;
+            lblTituloBarra.Height = 30;
+            lblTituloBarra.TextAlign = ContentAlignment.MiddleCenter;
+
+            GraficoBarras graficoBarras = new GraficoBarras();
+            graficoBarras.Dock = DockStyle.Fill;
+            graficoBarras.Name = "graficoBarras"; // Nome pra achar depois
+
+            cardBarra.Controls.Add(graficoBarras);
+            cardBarra.Controls.Add(lblTituloBarra);
+
+            // Adiciona os cards no layout
+            painelGraficos.Controls.Add(cardPizza, 0, 0);
+            painelGraficos.Controls.Add(cardBarra, 1, 0);
+
+            // Adiciona tudo na página
+            pagina.Controls.Add(painelGraficos);
+            pagina.Controls.Add(painelKpis);
+
+            // Atualiza os dados quando a aba abre
+            pagina.Enter += (s, e) => CarregarDashboard();
+
+            return pagina;
+        }
+        // ============================================================
+        // Busca os números no banco e atualiza os cards
+        // ============================================================
+        private void CarregarDashboard()
+        {
+            try
+            {
+                using (MySqlConnection conn = Conexao.Abrir())
+                {
+                    // --- KPIs ---
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM viagem", conn))
+                        lblKpiViagens.Text = Convert.ToInt64(cmd.ExecuteScalar()).ToString();
+
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM viagem WHERE situacao = 'Em Andamento'", conn))
+                        lblKpiEmAndamento.Text = Convert.ToInt64(cmd.ExecuteScalar()).ToString();
+
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT IFNULL(SUM(custo_estimado), 0) FROM viagem", conn))
+                    {
+                        decimal custo = Convert.ToDecimal(cmd.ExecuteScalar());
+                        lblKpiCusto.Text = "R$ " + custo.ToString("N2");
+                    }
+
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM motorista", conn))
+                        lblKpiMotoristas.Text = Convert.ToInt64(cmd.ExecuteScalar()).ToString();
+
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM veiculo", conn))
+                        lblKpiVeiculos.Text = Convert.ToInt64(cmd.ExecuteScalar()).ToString();
+
+                    // --- Dados do Gráfico de Pizza (Viagens por Situação) ---
+                    var dadosPizza = new System.Collections.Generic.Dictionary<string, decimal>();
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT situacao, COUNT(*) FROM viagem GROUP BY situacao", conn))
+                    using (MySqlDataReader rd = cmd.ExecuteReader())
+                    {
+                        while (rd.Read())
+                        {
+                            dadosPizza[rd.GetString(0)] = rd.GetInt32(1);
+                        }
+                    }
+
+                    // --- Dados do Gráfico de Barras (Viagens por Mês) ---
+                    var dadosBarras = new System.Collections.Generic.Dictionary<string, decimal>();
+                    // Agrupa pelos últimos 6 meses e formata o nome do mês (ex: "Out/26")
+                    string sqlMeses = @"
+                SELECT DATE_FORMAT(data_saida, '%b/%y') AS mes, COUNT(*) 
+                FROM viagem 
+                WHERE data_saida >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+                GROUP BY YEAR(data_saida), MONTH(data_saida), mes
+                ORDER BY YEAR(data_saida), MONTH(data_saida)";
+
+                    using (MySqlCommand cmd = new MySqlCommand(sqlMeses, conn))
+                    using (MySqlDataReader rd = cmd.ExecuteReader())
+                    {
+                        while (rd.Read())
+                        {
+                            dadosBarras[rd.GetString(0)] = rd.GetInt32(1);
+                        }
+                    }
+
+                    // --- Aplica os dados nos controles ---
+                    // Uso Find pra achar os controles em qualquer nível da tela
+                    Control[] foundPizza = this.Controls.Find("graficoPizza", true);
+                    if (foundPizza.Length > 0 && foundPizza[0] is GraficoPizza pizza)
+                    {
+                        pizza.Dados = dadosPizza;
+                        pizza.Invalidate(); // Força redesenhar
+                    }
+
+                    Control[] foundBarras = this.Controls.Find("graficoBarras", true);
+                    if (foundBarras.Length > 0 && foundBarras[0] is GraficoBarras barras)
+                    {
+                        barras.Dados = dadosBarras;
+                        barras.Invalidate(); // Força redesenhar
+                    }
+                }
+            }
+            catch (MySqlException)
+            {
+                // Banco fora, ignora
+            }
+            catch (Exception ex)
+            {
+                Log.Erro("Erro ao carregar dashboard", ex);
+            }
+        }
+        // ============================================================
+        // Método auxiliar: cria um card colorido
+        // ============================================================
+        private Label CriarCard(Panel pai, string titulo, string valor, Color cor, int x)
+        {
+            Panel card = new Panel();
+            card.Location = new Point(x, 20);
+            card.Size = new Size(220, 110);
+            card.BackColor = Color.White;
+            card.Paint += (s, e) =>
+            {
+                // Borda lilás clara
+                Rectangle r = card.ClientRectangle;
+                r.Width -= 1;
+                r.Height -= 1;
+                using (Pen caneta = new Pen(Estilo.LilasClaro, 1))
+                    e.Graphics.DrawRectangle(caneta, r);
+
+                // Barra colorida do lado esquerdo
+                using (SolidBrush pincel = new SolidBrush(cor))
+                    e.Graphics.FillRectangle(pincel, 0, 0, 6, card.Height);
+            };
+
+            // Título do card
+            Label lblTitulo = new Label();
+            lblTitulo.Text = titulo;
+            lblTitulo.Font = new Font("Segoe UI", 10F);
+            lblTitulo.ForeColor = Color.Gray;
+            lblTitulo.AutoSize = true;
+            lblTitulo.Location = new Point(20, 15);
+            card.Controls.Add(lblTitulo);
+
+            // Valor do card
+            Label lblValor = new Label();
+            lblValor.Text = valor;
+            lblValor.Font = new Font("Segoe UI Semibold", 24F);
+            lblValor.ForeColor = cor;
+            lblValor.AutoSize = true;
+            lblValor.Location = new Point(20, 45);
+            card.Controls.Add(lblValor);
+
+            pai.Controls.Add(card);
+
+            return lblValor;
+        }
+
+
         // ============================================================
         // ═══════════════════ ABA VEÍCULO ═══════════════════════════
         // ============================================================
         private TabPage CriarAbaVeiculo()
         {
+          
             TabPage pagina = NovaAba("Veículo");
 
             ToolStrip barra = CriarToolbar(
@@ -318,8 +581,12 @@ namespace ProjetoLogistica
                 ("Salvar", Icones.Salvar, (s, e) => VeiSalvar()),
                 ("Editar", Icones.Editar, (s, e) => VeiEditar()),
                 ("Excluir", Icones.Excluir, (s, e) => VeiExcluir()),
-                ("Atualizar", Icones.Atualizar, (s, e) => VeiCarregar())
+                ("Atualizar", Icones.Atualizar, (s, e) => VeiCarregar()),
+                ("CSV", Icones.Csv, (s, e) => Exportador.ExportarCSV(gridVei, "Veiculos")),
+                ("Relatório", Icones.Pdf, (s, e) => Exportador.ExportarHTML(gridVei, "Veiculos"))
             );
+
+           
 
             Panel painel = CriarPainelCampos(220);
 
@@ -500,7 +767,12 @@ namespace ProjetoLogistica
         }
 
         private void VeiExcluir()
+
         {
+            if (!PodeExcluir()) return;
+
+
+
             if (string.IsNullOrEmpty(txtVeiId.Text))
             {
                 MessageBox.Show("Selecione um veículo primeiro.", "Atenção",
@@ -588,13 +860,14 @@ namespace ProjetoLogistica
             TabPage pagina = NovaAba("Motorista");
 
             ToolStrip barra = CriarToolbar(
-                ("Novo", Icones.Novo, (s, e) => MotNovo()),
-                ("Salvar", Icones.Salvar, (s, e) => MotSalvar()),
-                ("Editar", Icones.Editar, (s, e) => MotEditar()),
-                ("Excluir", Icones.Excluir, (s, e) => MotExcluir()),
-                ("Atualizar", Icones.Atualizar, (s, e) => MotCarregar())
-            );
-
+     ("Novo", Icones.Novo, (s, e) => MotNovo()),
+     ("Salvar", Icones.Salvar, (s, e) => MotSalvar()),
+     ("Editar", Icones.Editar, (s, e) => MotEditar()),
+     ("Excluir", Icones.Excluir, (s, e) => MotExcluir()),
+     ("Atualizar", Icones.Atualizar, (s, e) => MotCarregar()),
+     ("CSV", Icones.Csv, (s, e) => Exportador.ExportarCSV(gridMot, "Motoristas")),
+     ("Relatório", Icones.Pdf, (s, e) => Exportador.ExportarHTML(gridMot, "Motoristas"))
+ );
             Panel painel = CriarPainelCampos(220);
 
             Lbl("ID:", 30, 25, painel);
@@ -743,6 +1016,9 @@ namespace ProjetoLogistica
 
         private void MotExcluir()
         {
+            if (!PodeExcluir()) return;
+
+
             if (string.IsNullOrEmpty(txtMotId.Text))
             {
                 MessageBox.Show("Selecione um motorista.", "Atenção",
@@ -821,12 +1097,14 @@ namespace ProjetoLogistica
             TabPage pagina = NovaAba("Rota");
 
             ToolStrip barra = CriarToolbar(
-                ("Novo", Icones.Novo, (s, e) => RotNovo()),
-                ("Salvar", Icones.Salvar, (s, e) => RotSalvar()),
-                ("Editar", Icones.Editar, (s, e) => RotEditar()),
-                ("Excluir", Icones.Excluir, (s, e) => RotExcluir()),
-                ("Atualizar", Icones.Atualizar, (s, e) => RotCarregar())
-            );
+    ("Novo", Icones.Novo, (s, e) => RotNovo()),
+    ("Salvar", Icones.Salvar, (s, e) => RotSalvar()),
+    ("Editar", Icones.Editar, (s, e) => RotEditar()),
+    ("Excluir", Icones.Excluir, (s, e) => RotExcluir()),
+    ("Atualizar", Icones.Atualizar, (s, e) => RotCarregar()),
+    ("CSV", Icones.Csv, (s, e) => Exportador.ExportarCSV(gridRot, "Rotas")),
+    ("Relatório", Icones.Pdf, (s, e) => Exportador.ExportarHTML(gridRot, "Rotas"))
+);
 
             Panel painel = CriarPainelCampos(200);
 
@@ -841,6 +1119,16 @@ namespace ProjetoLogistica
 
             Lbl("Distância (Km):", 30, 145, painel);
             txtRotDistancia = Txt(190, 142, 130, painel);
+
+            // ANOTAÇÃO: Adicionando o botão que chama a API de rotas!
+            Button btnCalcular = new Button();
+            btnCalcular.Text = "Calcular";
+            btnCalcular.Location = new Point(330, 141);
+            btnCalcular.Width = 100;
+            btnCalcular.Height = 28;
+            Estilo.Botao(btnCalcular, Estilo.Lilas); // Usei lilás pra diferenciar dos outros
+            btnCalcular.Click += async (s, e) => await CalcularRota();
+            painel.Controls.Add(btnCalcular);
 
             gridRot = NovaGrid();
             gridRot.CellClick += (s, e) =>
@@ -914,6 +1202,49 @@ namespace ProjetoLogistica
             }
         }
 
+        // ============================================================
+        // ANOTAÇÃO:
+        // Esse método chama a classe ApiRotas, que faz a chamada HTTP.
+        // Ele é "async" (assíncrono) pra não travar a tela do sistema
+        // enquanto a internet busca os dados. É uma boa prática!
+        // ============================================================
+        private async Task CalcularRota()
+        {
+            string origem = txtRotOrigem.Text.Trim();
+            string destino = txtRotDestino.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(origem) || string.IsNullOrWhiteSpace(destino))
+            {
+                MessageBox.Show("Preencha a Origem e o Destino antes de calcular.",
+                    "Atenção", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Muda o cursor pra "ampulheta" enquanto calcula
+            this.Cursor = Cursors.WaitCursor;
+
+            try
+            {
+                double distancia = await ApiRotas.CalcularDistanciaAsync(origem, destino);
+
+                if (distancia > 0)
+                {
+                    // Preenche o campo automaticamente!
+                    txtRotDistancia.Text = distancia.ToString("F2");
+                    Log.Info($"Rota calculada via API: {origem} -> {destino} = {distancia} km");
+                }
+                else
+                {
+                    MessageBox.Show("Não consegui calcular a rota. Verifique se digitou o nome das cidades corretamente ou se a internet está funcionando.",
+                        "Ops!", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+            finally
+            {
+                // Volta o cursor ao normal, mesmo se der erro
+                this.Cursor = Cursors.Default;
+            }
+        }
         private void RotEditar()
         {
             if (string.IsNullOrEmpty(txtRotId.Text))
@@ -962,6 +1293,9 @@ namespace ProjetoLogistica
 
         private void RotExcluir()
         {
+            if (!PodeExcluir()) return;
+
+
             if (string.IsNullOrEmpty(txtRotId.Text))
             {
                 MessageBox.Show("Selecione uma rota.", "Atenção",
@@ -1037,12 +1371,14 @@ namespace ProjetoLogistica
             TabPage pagina = NovaAba("Preço Combustível");
 
             ToolStrip barra = CriarToolbar(
-                ("Novo", Icones.Novo, (s, e) => PreNovo()),
-                ("Salvar", Icones.Salvar, (s, e) => PreSalvar()),
-                ("Editar", Icones.Editar, (s, e) => PreEditar()),
-                ("Excluir", Icones.Excluir, (s, e) => PreExcluir()),
-                ("Atualizar", Icones.Atualizar, (s, e) => PreCarregar())
-            );
+    ("Novo", Icones.Novo, (s, e) => PreNovo()),
+    ("Salvar", Icones.Salvar, (s, e) => PreSalvar()),
+    ("Editar", Icones.Editar, (s, e) => PreEditar()),
+    ("Excluir", Icones.Excluir, (s, e) => PreExcluir()),
+    ("Atualizar", Icones.Atualizar, (s, e) => PreCarregar()),
+    ("CSV", Icones.Csv, (s, e) => Exportador.ExportarCSV(gridPre, "Precos")),
+    ("Relatório", Icones.Pdf, (s, e) => Exportador.ExportarHTML(gridPre, "Precos"))
+);
 
             Panel painel = CriarPainelCampos(200);
 
@@ -1190,6 +1526,10 @@ namespace ProjetoLogistica
 
         private void PreExcluir()
         {
+
+            if (!PodeExcluir()) return;
+
+
             if (string.IsNullOrEmpty(txtPreId.Text))
             {
                 MessageBox.Show("Selecione um registro.", "Atenção",
@@ -1264,13 +1604,15 @@ namespace ProjetoLogistica
             TabPage pagina = NovaAba("Viagem");
 
             ToolStrip barra = CriarToolbar(
-                ("Novo", Icones.Novo, (s, e) => ViaNovo()),
-                ("Salvar", Icones.Salvar, (s, e) => ViaSalvar()),
-                ("Editar", Icones.Editar, (s, e) => ViaEditar()),
-                ("Excluir", Icones.Excluir, (s, e) => ViaExcluir()),
-                ("Atualizar", Icones.Atualizar, (s, e) => { ViaCarregar(); ViaCarregarCombos(); }
-            )
-            );
+    ("Novo", Icones.Novo, (s, e) => ViaNovo()),
+    ("Salvar", Icones.Salvar, (s, e) => ViaSalvar()),
+    ("Editar", Icones.Editar, (s, e) => ViaEditar()),
+    ("Excluir", Icones.Excluir, (s, e) => ViaExcluir()),
+    ("Atualizar", Icones.Atualizar, (s, e) => { ViaCarregar(); ViaCarregarCombos(); }
+            ),
+    ("CSV", Icones.Csv, (s, e) => Exportador.ExportarCSV(gridVia, "Viagens")),
+    ("Relatório", Icones.Pdf, (s, e) => Exportador.ExportarHTML(gridVia, "Viagens"))
+);
 
             Panel painel = CriarPainelCampos(300);
 
@@ -1573,6 +1915,9 @@ namespace ProjetoLogistica
 
         private void ViaExcluir()
         {
+            if (!PodeExcluir()) return;
+
+
             if (string.IsNullOrEmpty(txtViaId.Text))
             {
                 MessageBox.Show("Selecione uma viagem.", "Atenção",
@@ -1650,59 +1995,298 @@ namespace ProjetoLogistica
         }
 
         // ============================================================
-        // ═══════════ ABA CONSULTAR VIAGEM (com filtros) ════════════
+        // ═══════════════ ABA RASTREAMENTO ══════════════════════════
+        // ============================================================
+        // ANOTAÇÃO:
+        // Mostra cada viagem em andamento num "card" colorido.
+        // A cor muda conforme o tempo que a viagem já tá rolando:
+        //   - Verde (menta) = menos de 4h (normal)
+        //   - Lilás = entre 4h e 8h (atenção)
+        //   - Índigo escuro = mais de 8h (atrasada)
+        //
+        // Tem um timer que atualiza os tempos a cada 30 segundos,
+        // então o painel fica "vivo" durante a apresentação.
+        // ============================================================
+
+        private TabPage CriarAbaRastreamento()
+        {
+            TabPage pagina = NovaAba("Rastreamento");
+
+            // ----- Barra de ferramentas no topo -----
+            ToolStrip barra = CriarToolbar(
+    ("Filtrar", Icones.Filtro, (s, e) => FiltrarViagens()),
+    ("Limpar", Icones.Limpar, (s, e) => { LimparFiltros(); FiltrarViagens(); }
+            ),
+    ("CSV", Icones.Csv, (s, e) => Exportador.ExportarCSV(gridConsulta, "Monitoramento")),
+    ("Relatório", Icones.Pdf, (s, e) => Exportador.ExportarHTML(gridConsulta, "Monitoramento"))
+);
+
+            // ----- Painel com legenda -----
+            Panel painelTopo = new Panel();
+            painelTopo.Dock = DockStyle.Top;
+            painelTopo.Height = 60;
+            painelTopo.BackColor = Color.White;
+            painelTopo.Padding = new Padding(20);
+
+            Label lblTitulo = new Label();
+            lblTitulo.Text = "📍 Acompanhamento de Viagens em Andamento";
+            lblTitulo.Font = new Font("Segoe UI Semibold", 14F);
+            lblTitulo.ForeColor = Estilo.IndigoEscuro;
+            lblTitulo.AutoSize = true;
+            lblTitulo.Location = new Point(20, 15);
+            painelTopo.Controls.Add(lblTitulo);
+
+            Label lblLegenda = new Label();
+            lblLegenda.Text = "🟢 Normal (< 4h)    🟣 Atenção (4-8h)    🔵 Atrasada (> 8h)";
+            lblLegenda.Font = new Font("Segoe UI", 10F);
+            lblLegenda.ForeColor = Color.Gray;
+            lblLegenda.AutoSize = true;
+            lblLegenda.Location = new Point(20, 40);
+            painelTopo.Controls.Add(lblLegenda);
+
+            // ----- Painel com scroll (onde ficam os cards) -----
+            Panel painelCards = new Panel();
+            painelCards.Dock = DockStyle.Fill;
+            painelCards.BackColor = Estilo.MentaBemClaro;
+            painelCards.AutoScroll = true;
+            painelCards.Padding = new Padding(20);
+            painelCards.Name = "painelCardsRastreamento"; // nome pra achar depois
+
+            // Adiciona os controles na ordem certa
+            pagina.Controls.Add(painelCards);
+            pagina.Controls.Add(painelTopo);
+            pagina.Controls.Add(barra);
+
+            // ANOTAÇÃO: timer que atualiza a cada 30 segundos.
+            // Faz os "Saiu há X" mudarem em tempo real durante a apresentação.
+            System.Windows.Forms.Timer timerAtualiza = new System.Windows.Forms.Timer(); timerAtualiza.Interval = 30000; // 30 segundos
+            timerAtualiza.Tick += (s, e) =>
+            {
+                // Só atualiza se a aba tá visível (economiza recurso)
+                if (abas.SelectedTab == pagina)
+                    CarregarRastreamento();
+            };
+            timerAtualiza.Start();
+
+            // Guarda referência pro timer não ser destruído pelo Garbage Collector
+            pagina.Tag = timerAtualiza;
+
+            // Carrega ao entrar na aba
+            pagina.Enter += (s, e) => CarregarRastreamento();
+
+            return pagina;
+        }
+
+        // ============================================================
+        // Busca as viagens em andamento e monta os cards
+        // ============================================================
+        private void CarregarRastreamento()
+        {
+            // Acha o painel pelo nome (truque pra achar sem variável global)
+            Control[] encontrado = this.Controls.Find("painelCardsRastreamento", true);
+            if (encontrado.Length == 0) return;
+
+            Panel painelCards = (Panel)encontrado[0];
+            painelCards.Controls.Clear();
+
+            try
+            {
+                using (MySqlConnection conn = Conexao.Abrir())
+                {
+                    string sql = @"
+                SELECT v.viagemID,
+                       ve.placa,
+                       mo.nome AS motorista,
+                       CONCAT(r.origem, ' → ', r.destino) AS rota,
+                       v.data_saida
+                FROM viagem v
+                JOIN veiculo ve ON ve.veiculoID = v.veiculoID
+                JOIN motorista mo ON mo.motoristaID = v.motoristaID
+                JOIN rota r ON r.rotaID = v.rotaID
+                WHERE v.situacao = 'Em Andamento'
+                ORDER BY v.data_saida ASC";
+
+                    using (MySqlCommand cmd = new MySqlCommand(sql, conn))
+                    using (MySqlDataReader rd = cmd.ExecuteReader())
+                    {
+                        int posicaoY = 10;
+                        int total = 0;
+
+                        while (rd.Read())
+                        {
+                            string placa = rd.GetString("placa");
+                            string motorista = rd.GetString("motorista");
+                            string rota = rd.GetString("rota");
+                            DateTime saida = rd.GetDateTime("data_saida");
+
+                            // Calcula o tempo decorrido
+                            TimeSpan decorrido = DateTime.Now - saida;
+                            int horas = (int)decorrido.TotalHours;
+                            int minutos = decorrido.Minutes;
+
+                            // Define a cor conforme o tempo
+                            Color corStatus;
+                            string iconeStatus;
+                            string avisoAtraso = "";
+
+                            if (horas < 4)
+                            {
+                                corStatus = Estilo.MentaEscuro;
+                                iconeStatus = "🟢";
+                            }
+                            else if (horas < 8)
+                            {
+                                corStatus = Estilo.LilasEscuro;
+                                iconeStatus = "🟣";
+                            }
+                            else
+                            {
+                                corStatus = Estilo.IndigoEscuro;
+                                iconeStatus = "🔵";
+                                avisoAtraso = " (ATRASADA!)";
+                            }
+
+                            // Cria o card
+                            Panel card = new Panel();
+                            card.Location = new Point(10, posicaoY);
+                            card.Size = new Size(painelCards.Width - 40, 100);
+                            card.BackColor = Color.White;
+
+                            // Borda e barra colorida (no Paint)
+                            Color corFinal = corStatus;
+                            card.Paint += (s, e) =>
+                            {
+                                Rectangle r = card.ClientRectangle;
+                                r.Width -= 1;
+                                r.Height -= 1;
+                                using (Pen caneta = new Pen(Estilo.LilasClaro, 1))
+                                    e.Graphics.DrawRectangle(caneta, r);
+
+                                using (SolidBrush pincel = new SolidBrush(corFinal))
+                                    e.Graphics.FillRectangle(pincel, 0, 0, 8, card.Height);
+                            };
+
+                            // Linha 1: placa + motorista
+                            Label lblLinha1 = new Label();
+                            lblLinha1.Text = iconeStatus + "  " + placa + "  ·  " + motorista;
+                            lblLinha1.Font = new Font("Segoe UI Semibold", 13F);
+                            lblLinha1.ForeColor = Estilo.IndigoEscuro;
+                            lblLinha1.AutoSize = true;
+                            lblLinha1.Location = new Point(25, 15);
+                            card.Controls.Add(lblLinha1);
+
+                            // Linha 2: rota
+                            Label lblLinha2 = new Label();
+                            lblLinha2.Text = rota;
+                            lblLinha2.Font = new Font("Segoe UI", 11F);
+                            lblLinha2.ForeColor = Estilo.TextoEscuro;
+                            lblLinha2.AutoSize = true;
+                            lblLinha2.Location = new Point(25, 45);
+                            card.Controls.Add(lblLinha2);
+
+                            // Linha 3: tempo decorrido
+                            Label lblLinha3 = new Label();
+                            lblLinha3.Text = "⏱️  Saiu há " + horas + "h " + minutos.ToString("00") + "min" + avisoAtraso;
+                            lblLinha3.Font = new Font("Segoe UI Semibold", 10F);
+                            lblLinha3.ForeColor = corStatus;
+                            lblLinha3.AutoSize = true;
+                            lblLinha3.Location = new Point(25, 70);
+                            card.Controls.Add(lblLinha3);
+
+                            painelCards.Controls.Add(card);
+                            posicaoY += 115;
+                            total++;
+                        }
+
+                        // Se não tem viagem em andamento, mostra mensagem
+                        if (total == 0)
+                        {
+                            Label lblVazio = new Label();
+                            lblVazio.Text = "✅ Nenhuma viagem em andamento no momento.";
+                            lblVazio.Font = new Font("Segoe UI", 14F, FontStyle.Italic);
+                            lblVazio.ForeColor = Color.Gray;
+                            lblVazio.AutoSize = true;
+                            lblVazio.Location = new Point(30, 30);
+                            painelCards.Controls.Add(lblVazio);
+                        }
+                    }
+                }
+            }
+            catch (MySqlException)
+            {
+                // Banco fora, deixa o painel vazio
+            }
+            catch (Exception ex)
+            {
+                Log.Erro("Erro no rastreamento", ex);
+            }
+        }
+
+        // ============================================================
+        // ═══════════════ ABA CONSULTAR / MONITORAR ═════════════════
         // ============================================================
         private TabPage CriarAbaConsulta()
         {
-            TabPage pagina = NovaAba("Consultar Viagem");
+            TabPage pagina = NovaAba("Monitoramento");
 
             ToolStrip barra = CriarToolbar(
                 ("Filtrar", Icones.Filtro, (s, e) => FiltrarViagens()),
                 ("Limpar", Icones.Limpar, (s, e) => { LimparFiltros(); FiltrarViagens(); }
-            )
+            ),
+                ("CSV", Icones.Csv, (s, e) => Exportador.ExportarCSV(gridConsulta, "Monitoramento")),
+                ("Relatório", Icones.Pdf, (s, e) => Exportador.ExportarHTML(gridConsulta, "Monitoramento"))
             );
+
 
             Panel painel = CriarPainelCampos(160);
 
             Lbl("Status:", 30, 25, painel);
-            cmbFilStatus = new ComboBox();
-            cmbFilStatus.Location = new Point(110, 22);
-            cmbFilStatus.Width = 180;
-            cmbFilStatus.Font = new Font("Segoe UI", 11F);
-            cmbFilStatus.DropDownStyle = ComboBoxStyle.DropDownList;
-            cmbFilStatus.Items.Add("Todos");
-            cmbFilStatus.Items.Add("Em Andamento");
-            cmbFilStatus.Items.Add("Concluída");
-            cmbFilStatus.SelectedIndex = 0;
-            painel.Controls.Add(cmbFilStatus);
+            cmbFiltroStatus = new ComboBox();
+            cmbFiltroStatus.Location = new Point(110, 22);
+            cmbFiltroStatus.Width = 180;
+            cmbFiltroStatus.Font = new Font("Segoe UI", 11F);
+            cmbFiltroStatus.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbFiltroStatus.Items.Add("Todos");
+            cmbFiltroStatus.Items.Add("Em Andamento");
+            cmbFiltroStatus.Items.Add("Concluída");
+            cmbFiltroStatus.SelectedIndex = 0;
+            painel.Controls.Add(cmbFiltroStatus);
 
             Lbl("De:", 320, 25, painel);
-            dtpFilDe = new DateTimePicker();
-            dtpFilDe.Location = new Point(370, 22);
-            dtpFilDe.Width = 160;
-            dtpFilDe.Format = DateTimePickerFormat.Short;
-            dtpFilDe.Font = new Font("Segoe UI", 11F);
-            dtpFilDe.Value = DateTime.Now.AddMonths(-1);  // últimos 30 dias
-            painel.Controls.Add(dtpFilDe);
+            dtpFiltroDe = new DateTimePicker();
+            dtpFiltroDe.Location = new Point(370, 22);
+            dtpFiltroDe.Width = 160;
+            dtpFiltroDe.Format = DateTimePickerFormat.Short;
+            dtpFiltroDe.Font = new Font("Segoe UI", 11F);
+            dtpFiltroDe.Value = DateTime.Now.AddMonths(-1);
+            painel.Controls.Add(dtpFiltroDe);
 
             Lbl("Até:", 560, 25, painel);
-            dtpFilAte = new DateTimePicker();
-            dtpFilAte.Location = new Point(610, 22);
-            dtpFilAte.Width = 160;
-            dtpFilAte.Format = DateTimePickerFormat.Short;
-            dtpFilAte.Font = new Font("Segoe UI", 11F);
-            painel.Controls.Add(dtpFilAte);
+            dtpFiltroAte = new DateTimePicker();
+            dtpFiltroAte.Location = new Point(610, 22);
+            dtpFiltroAte.Width = 160;
+            dtpFiltroAte.Format = DateTimePickerFormat.Short;
+            dtpFiltroAte.Font = new Font("Segoe UI", 11F);
+            painel.Controls.Add(dtpFiltroAte);
 
             Label lblTitulo = new Label();
-            lblTitulo.Text = "Resultados da viagem";
+            lblTitulo.Text = "Resultados e Acompanhamento";
             lblTitulo.Font = new Font("Segoe UI Semibold", 12F);
             lblTitulo.ForeColor = Estilo.IndigoEscuro;
             lblTitulo.AutoSize = true;
             lblTitulo.Location = new Point(30, 75);
             painel.Controls.Add(lblTitulo);
 
-            gridConsulta = NovaGrid();
+            // Legenda de cores
+            Label lblLegenda = new Label();
+            lblLegenda.Text = "🟢 Normal (< 4h)    🟣 Atenção (4-8h)    🔵 Atrasada (> 8h)";
+            lblLegenda.Font = new Font("Segoe UI", 9F, FontStyle.Italic);
+            lblLegenda.ForeColor = Color.Gray;
+            lblLegenda.AutoSize = true;
+            lblLegenda.Location = new Point(30, 100);
+            painel.Controls.Add(lblLegenda);
 
+            gridConsulta = NovaGrid();
             pagina.Enter += (s, e) => FiltrarViagens();
 
             pagina.Controls.Add(gridConsulta);
@@ -1713,9 +2297,9 @@ namespace ProjetoLogistica
 
         private void LimparFiltros()
         {
-            cmbFilStatus.SelectedIndex = 0;
-            dtpFilDe.Value = DateTime.Now.AddMonths(-1);
-            dtpFilAte.Value = DateTime.Now;
+            cmbFiltroStatus.SelectedIndex = 0;
+            dtpFiltroDe.Value = DateTime.Now.AddMonths(-1);
+            dtpFiltroAte.Value = DateTime.Now;
         }
 
         private void FiltrarViagens()
@@ -1724,10 +2308,6 @@ namespace ProjetoLogistica
             {
                 using (MySqlConnection conn = Conexao.Abrir())
                 {
-                    // ANOTAÇÃO: aqui a gente monta a query conforme
-                    // os filtros escolhidos. Uso "1=1" no começo pra
-                    // poder concatenar AND depois sem me preocupar
-                    // se é o primeiro filtro ou não. Truque clássico.
                     string sql = @"
                         SELECT v.viagemID AS ID,
                                ve.placa AS Veiculo,
@@ -1742,20 +2322,18 @@ namespace ProjetoLogistica
                         JOIN rota r ON r.rotaID = v.rotaID
                         WHERE 1=1";
 
-                    // Filtro de status
-                    if (cmbFilStatus.SelectedIndex == 1)
+                    if (cmbFiltroStatus.SelectedIndex == 1)
                         sql += " AND v.situacao = 'Em Andamento'";
-                    else if (cmbFilStatus.SelectedIndex == 2)
+                    else if (cmbFiltroStatus.SelectedIndex == 2)
                         sql += " AND v.situacao = 'Concluída'";
 
-                    // Filtro de data (só a parte da data, ignorando hora)
                     sql += " AND DATE(v.data_saida) BETWEEN @de AND @ate";
                     sql += " ORDER BY v.viagemID DESC";
 
                     using (MySqlCommand cmd = new MySqlCommand(sql, conn))
                     {
-                        cmd.Parameters.AddWithValue("@de", dtpFilDe.Value.Date);
-                        cmd.Parameters.AddWithValue("@ate", dtpFilAte.Value.Date);
+                        cmd.Parameters.AddWithValue("@de", dtpFiltroDe.Value.Date);
+                        cmd.Parameters.AddWithValue("@ate", dtpFiltroAte.Value.Date);
 
                         using (MySqlDataAdapter da = new MySqlDataAdapter(cmd))
                         {
@@ -1765,12 +2343,40 @@ namespace ProjetoLogistica
                         }
                     }
                 }
+
+                // Colorir as linhas de viagens em andamento
+                foreach (DataGridViewRow linha in gridConsulta.Rows)
+                {
+                    string status = linha.Cells["Status"].Value?.ToString();
+
+                    if (status == "Em Andamento")
+                    {
+                        DateTime saida = Convert.ToDateTime(linha.Cells["Saida"].Value);
+                        TimeSpan tempoDecorrido = DateTime.Now - saida;
+                        double horas = tempoDecorrido.TotalHours;
+
+                        Color corLinha;
+                        if (horas < 4)
+                            corLinha = Estilo.MentaEscuro;
+                        else if (horas < 8)
+                            corLinha = Estilo.LilasEscuro;
+                        else
+                            corLinha = Estilo.IndigoEscuro;
+
+                        linha.DefaultCellStyle.BackColor = corLinha;
+                        linha.DefaultCellStyle.ForeColor = Color.White;
+                        linha.DefaultCellStyle.SelectionBackColor = corLinha;
+                    }
+                }
             }
-            catch (MySqlException) { gridConsulta.DataSource = null; }
+            catch (MySqlException)
+            {
+                gridConsulta.DataSource = null;
+            }
             catch (Exception ex)
             {
-                MessageBox.Show("Erro no filtro: " + ex.Message,
-                    "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Erro no filtro: " + ex.Message, "Erro",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

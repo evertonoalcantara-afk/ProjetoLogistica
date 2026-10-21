@@ -8,8 +8,8 @@ namespace ProjetoLogistica
 {
     // ============================================================
     // ANOTAÇÃO:
-    // Tela de login. Valida usuário/senha com hash SHA256,
-    // bloqueia após 5 tentativas erradas e registra tudo no Log.
+    // Tela de login com hash SHA256, bloqueio após 5 tentativas,
+    // log de auditoria e gravação da Session (usuário logado).
     // ============================================================
 
     public class FrmLogin : Form
@@ -194,9 +194,9 @@ namespace ProjetoLogistica
         }
 
         // ============================================================
-        // BOTÃO ENTRAR (com hash + bloqueio + log)
+        // BOTÃO ENTRAR
         // ============================================================
-        private void BtnEntrar_Click(object sender, EventArgs e)
+        private void BtnEntrar_Click(object? sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtUsuario.Text) ||
                 string.IsNullOrWhiteSpace(txtSenha.Text))
@@ -207,8 +207,6 @@ namespace ProjetoLogistica
             }
 
             string loginDigitado = txtUsuario.Text.Trim();
-
-            // Registra a tentativa no log
             Log.Info("Tentativa de login: " + loginDigitado);
 
             try
@@ -249,7 +247,7 @@ namespace ProjetoLogistica
                         }
                     }
 
-                    // Tá bloqueado ainda?
+                    // Tá bloqueado?
                     if (bloqueadoAte != null && bloqueadoAte.Value > DateTime.Now)
                     {
                         int minutosRestantes = (int)(bloqueadoAte.Value - DateTime.Now).TotalMinutes;
@@ -269,13 +267,16 @@ namespace ProjetoLogistica
                     // Senha confere?
                     if (Security.SenhaConfere(txtSenha.Text, hashDoBanco))
                     {
-                        // Zera tentativas
                         using (MySqlCommand cmdReset = new MySqlCommand(
                             "UPDATE usuario SET tentativas = 0, bloqueado_ate = NULL WHERE usuarioID = @id", conn))
                         {
                             cmdReset.Parameters.AddWithValue("@id", id);
                             cmdReset.ExecuteNonQuery();
                         }
+
+                        // ANOTAÇÃO: guarda o usuário na Session
+                        Session.Usuario = loginDigitado;
+                        Session.Perfil = perfil;
 
                         Log.Info("Login OK: " + loginDigitado + " (" + perfil + ")");
 
@@ -286,7 +287,7 @@ namespace ProjetoLogistica
                         return;
                     }
 
-                    // Senha errada: aumenta tentativa
+                    // Senha errada
                     tentativas++;
 
                     if (tentativas >= 5)
@@ -318,7 +319,6 @@ namespace ProjetoLogistica
                         }
 
                         int restantes = 5 - tentativas;
-
                         Log.Info("Senha incorreta para '" + loginDigitado +
                                  "' (tentativa " + tentativas + "/5)");
 
@@ -355,10 +355,7 @@ namespace ProjetoLogistica
             }
         }
 
-        // ============================================================
-        // BOTÃO CADASTRAR
-        // ============================================================
-        private void BtnCadastrar_Click(object sender, EventArgs e)
+        private void BtnCadastrar_Click(object? sender, EventArgs e)
         {
             FrmCadastro tela = new FrmCadastro();
             tela.ShowDialog();

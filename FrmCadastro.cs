@@ -8,8 +8,8 @@ namespace ProjetoLogistica
 {
     // ============================================================
     // ANOTAÇÃO:
-    // Tela de cadastro de novos usuários. Senha vai pro banco
-    // como hash SHA256 e o cadastro é registrado no Log.
+    // Cadastro de novos usuários com senha em hash SHA256
+    // e registro no Log.
     // ============================================================
 
     public class FrmCadastro : Form
@@ -30,9 +30,6 @@ namespace ProjetoLogistica
             this.BackColor = Estilo.MentaBemClaro;
             this.Font = new Font("Segoe UI", 10F);
 
-            // ============================================================
-            // PAINEL ESQUERDO
-            // ============================================================
             Panel painelEsq = new Panel();
             painelEsq.Dock = DockStyle.Left;
             painelEsq.Width = 400;
@@ -87,9 +84,6 @@ namespace ProjetoLogistica
             lblCopy.BackColor = Color.Transparent;
             painelEsq.Controls.Add(lblCopy);
 
-            // ============================================================
-            // CARD DE CADASTRO
-            // ============================================================
             Panel card = new Panel();
             card.Size = new Size(400, 470);
             card.Location = new Point(465, 55);
@@ -121,7 +115,6 @@ namespace ProjetoLogistica
             lblInstrucao.Location = new Point(40, 78);
             card.Controls.Add(lblInstrucao);
 
-            // ----- LOGIN -----
             Label lblLogin = new Label();
             lblLogin.Text = "Usuário";
             lblLogin.Font = new Font("Segoe UI Semibold", 10F);
@@ -136,7 +129,6 @@ namespace ProjetoLogistica
             Estilo.TextBox(txtLogin);
             card.Controls.Add(txtLogin);
 
-            // ----- SENHA -----
             Label lblSenha = new Label();
             lblSenha.Text = "Senha";
             lblSenha.Font = new Font("Segoe UI Semibold", 10F);
@@ -152,7 +144,6 @@ namespace ProjetoLogistica
             Estilo.TextBox(txtSenha);
             card.Controls.Add(txtSenha);
 
-            // ----- CONFIRMAR -----
             Label lblConfirma = new Label();
             lblConfirma.Text = "Confirmar senha";
             lblConfirma.Font = new Font("Segoe UI Semibold", 10F);
@@ -168,7 +159,6 @@ namespace ProjetoLogistica
             Estilo.TextBox(txtConfirma);
             card.Controls.Add(txtConfirma);
 
-            // ----- BOTÃO CADASTRAR -----
             btnCadastrar = new Button();
             btnCadastrar.Text = "Cadastrar";
             btnCadastrar.Location = new Point(40, 350);
@@ -178,7 +168,6 @@ namespace ProjetoLogistica
             btnCadastrar.Click += BtnCadastrar_Click;
             card.Controls.Add(btnCadastrar);
 
-            // ----- BOTÃO VOLTAR -----
             btnVoltar = new Button();
             btnVoltar.Text = "← Voltar pro login";
             btnVoltar.Location = new Point(40, 400);
@@ -197,12 +186,8 @@ namespace ProjetoLogistica
             this.AcceptButton = btnCadastrar;
         }
 
-        // ============================================================
-        // BOTÃO CADASTRAR
-        // ============================================================
-        private void BtnCadastrar_Click(object sender, EventArgs e)
+        private void BtnCadastrar_Click(object? sender, EventArgs e)
         {
-            // ----- Validações -----
             if (string.IsNullOrWhiteSpace(txtLogin.Text))
             {
                 MessageBox.Show("Preencha o nome de usuário.", "Atenção",
@@ -242,7 +227,6 @@ namespace ProjetoLogistica
             {
                 using (MySqlConnection conn = Conexao.Abrir())
                 {
-                    // Verifica se já existe
                     using (MySqlCommand cmdVerifica = new MySqlCommand(
                         "SELECT COUNT(*) FROM usuario WHERE login = @login", conn))
                     {
@@ -252,7 +236,6 @@ namespace ProjetoLogistica
                         if (quantidade > 0)
                         {
                             Log.Info("Tentativa de cadastro com login já existente: " + loginDigitado);
-
                             MessageBox.Show("Esse usuário já existe. Escolha outro.", "Atenção",
                                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             txtLogin.Focus();
@@ -261,7 +244,6 @@ namespace ProjetoLogistica
                         }
                     }
 
-                    // Cadastra com hash
                     using (MySqlCommand cmdInsert = new MySqlCommand(
                         "INSERT INTO usuario (login, senha, perfil) VALUES (@login, @senha, 'Operador')", conn))
                     {
