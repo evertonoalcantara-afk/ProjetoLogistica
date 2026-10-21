@@ -161,7 +161,7 @@ namespace ProjetoLogistica
 
             btnCadastrar = new Button();
             btnCadastrar.Text = "Cadastrar";
-            btnCadastrar.Location = new Point(40, 350);
+            btnCadastrar.Location = new Point(40, 360);
             btnCadastrar.Width = 320;
             btnCadastrar.TextAlign = ContentAlignment.MiddleCenter;
             Estilo.Botao(btnCadastrar, Estilo.Indigo);
@@ -170,7 +170,7 @@ namespace ProjetoLogistica
 
             btnVoltar = new Button();
             btnVoltar.Text = "← Voltar pro login";
-            btnVoltar.Location = new Point(40, 400);
+            btnVoltar.Location = new Point(40, 410);
             btnVoltar.Width = 320;
             btnVoltar.Height = 34;
             btnVoltar.FlatStyle = FlatStyle.Flat;
@@ -182,6 +182,21 @@ namespace ProjetoLogistica
             btnVoltar.FlatAppearance.MouseOverBackColor = Estilo.LilasBemClaro;
             btnVoltar.Click += (s, e) => this.Close();
             card.Controls.Add(btnVoltar);
+
+            // BOTÃO OLHINHO (Mostrar/Ocultar senha)
+            CheckBox chkMostrarSenha = new CheckBox();
+            chkMostrarSenha.Text = "Mostrar senhas";
+            chkMostrarSenha.Location = new Point(40, 320);
+            chkMostrarSenha.AutoSize = true;
+            chkMostrarSenha.Font = new Font("Segoe UI", 9F);
+            chkMostrarSenha.ForeColor = Estilo.TextoEscuro;
+            chkMostrarSenha.CheckedChanged += (s, e) =>
+            {
+                // Inverte o que tá selecionado
+                txtSenha.UseSystemPasswordChar = !chkMostrarSenha.Checked;
+                txtConfirma.UseSystemPasswordChar = !chkMostrarSenha.Checked;
+            };
+            card.Controls.Add(chkMostrarSenha);
 
             this.AcceptButton = btnCadastrar;
         }

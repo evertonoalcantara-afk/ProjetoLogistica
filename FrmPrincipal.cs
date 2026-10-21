@@ -658,6 +658,20 @@ namespace ProjetoLogistica
                 return;
             }
 
+            // ANOTAÇÃO: Valida se a placa segue o padrão do Mercosul (ABC1D23) 
+            // ou o padrão antigo (ABC1234). Evita cadastrar "banana" como placa.
+            string placaFormatada = txtVeiPlaca.Text.Trim().ToUpper();
+            System.Text.RegularExpressions.Regex regexPlaca =
+                new System.Text.RegularExpressions.Regex(@"^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$");
+
+            if (!regexPlaca.IsMatch(placaFormatada))
+            {
+                MessageBox.Show("Placa inválida! Use o formato ABC1234 ou ABC1D23 (sem hífen).",
+                    "Atenção", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtVeiPlaca.Focus();
+                return;
+            }
+
             try
             {
                 using (MySqlConnection conn = Conexao.Abrir())
@@ -721,6 +735,20 @@ namespace ProjetoLogistica
             {
                 MessageBox.Show("Selecione um veículo na lista primeiro.",
                     "Atenção", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // ANOTAÇÃO: Valida se a placa segue o padrão do Mercosul (ABC1D23) 
+            // ou o padrão antigo (ABC1234). Evita cadastrar "banana" como placa.
+            string placaFormatada = txtVeiPlaca.Text.Trim().ToUpper();
+            System.Text.RegularExpressions.Regex regexPlaca =
+                new System.Text.RegularExpressions.Regex(@"^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$");
+
+            if (!regexPlaca.IsMatch(placaFormatada))
+            {
+                MessageBox.Show("Placa inválida! Use o formato ABC1234 ou ABC1D23 (sem hífen).",
+                    "Atenção", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtVeiPlaca.Focus();
                 return;
             }
 
@@ -807,15 +835,20 @@ namespace ProjetoLogistica
                 VeiNovo();
                 VeiCarregar();
             }
-            catch (MySqlException)
+            catch (MySqlException ex) when (ex.Number == 1451)
             {
-                // Esse erro acontece quando o veículo tem viagens
-                // vinculadas (a FK do banco impede a exclusão).
+                // Erro 1451 = Foreign Key Constraint (tem viagens vinculadas)
                 MessageBox.Show(
-                    "Não dá pra excluir: esse veículo tem viagens cadastradas.",
-                    "Não pode excluir",
+                    "Não dá pra excluir este veículo porque ele já possui viagens cadastradas.",
+                    "Ação Bloqueada",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
+            catch (MySqlException ex)
+            {
+                MessageBox.Show("Erro no banco: " + ex.Message,
+                    "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
             catch (Exception ex)
             {
                 MessageBox.Show("Erro ao excluir: " + ex.Message,
@@ -1018,7 +1051,6 @@ namespace ProjetoLogistica
         {
             if (!PodeExcluir()) return;
 
-
             if (string.IsNullOrEmpty(txtMotId.Text))
             {
                 MessageBox.Show("Selecione um motorista.", "Atenção",
@@ -1027,10 +1059,8 @@ namespace ProjetoLogistica
             }
 
             DialogResult resp = MessageBox.Show(
-                "Excluir este motorista?",
-                "Confirmação",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
+                "Excluir este motorista?", "Confirmação",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
             if (resp != DialogResult.Yes) return;
 
@@ -1052,20 +1082,25 @@ namespace ProjetoLogistica
                 MotNovo();
                 MotCarregar();
             }
-            catch (MySqlException)
+            catch (MySqlException ex) when (ex.Number == 1451)
             {
+                // Erro 1451 = Foreign Key Constraint (tem viagens vinculadas)
                 MessageBox.Show(
-                    "Não dá pra excluir: esse motorista tem viagens cadastradas.",
-                    "Não pode excluir",
+                    "Não dá pra excluir este motorista porque ele já possui viagens cadastradas.",
+                    "Ação Bloqueada",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            catch (MySqlException ex)
+            {
+                MessageBox.Show("Erro no banco: " + ex.Message,
+                    "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Erro: " + ex.Message,
+                MessageBox.Show("Erro inesperado: " + ex.Message,
                     "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
         private void MotCarregar()
         {
             try
@@ -1295,7 +1330,6 @@ namespace ProjetoLogistica
         {
             if (!PodeExcluir()) return;
 
-
             if (string.IsNullOrEmpty(txtRotId.Text))
             {
                 MessageBox.Show("Selecione uma rota.", "Atenção",
@@ -1327,19 +1361,25 @@ namespace ProjetoLogistica
                 RotNovo();
                 RotCarregar();
             }
-            catch (MySqlException)
+            catch (MySqlException ex) when (ex.Number == 1451)
             {
-                MessageBox.Show("Essa rota tem viagens cadastradas.",
-                    "Não pode excluir",
+                // Erro 1451 = Foreign Key Constraint (tem viagens vinculadas)
+                MessageBox.Show(
+                    "Não dá pra excluir esta rota porque ela já está vinculada a uma viagem.",
+                    "Ação Bloqueada",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            catch (MySqlException ex)
+            {
+                MessageBox.Show("Erro no banco: " + ex.Message,
+                    "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Erro: " + ex.Message,
+                MessageBox.Show("Erro inesperado: " + ex.Message,
                     "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
         private void RotCarregar()
         {
             try

@@ -151,6 +151,19 @@ namespace ProjetoLogistica
             lblSenha.Location = new Point(40, 210);
             card.Controls.Add(lblSenha);
 
+            // BOTÃO OLHINHO (Mostrar/Ocultar senha)
+            CheckBox chkMostrarSenha = new CheckBox();
+            chkMostrarSenha.Text = "Mostrar senha";
+            chkMostrarSenha.Location = new Point(40, 265); // Fica logo abaixo da senha
+            chkMostrarSenha.AutoSize = true;
+            chkMostrarSenha.Font = new Font("Segoe UI", 9F);
+            chkMostrarSenha.ForeColor = Estilo.TextoEscuro;
+            chkMostrarSenha.CheckedChanged += (s, e) =>
+            {
+                txtSenha.UseSystemPasswordChar = !chkMostrarSenha.Checked;
+            };
+            card.Controls.Add(chkMostrarSenha);
+
             txtSenha = new TextBox();
             txtSenha.Location = new Point(40, 235);
             txtSenha.Width = 320;
@@ -160,7 +173,7 @@ namespace ProjetoLogistica
 
             btnEntrar = new Button();
             btnEntrar.Text = "Entrar";
-            btnEntrar.Location = new Point(40, 295);
+            btnEntrar.Location = new Point(40, 305);
             btnEntrar.Width = 320;
             btnEntrar.TextAlign = ContentAlignment.MiddleCenter;
             Estilo.Botao(btnEntrar, Estilo.Indigo);
@@ -169,7 +182,7 @@ namespace ProjetoLogistica
 
             btnCadastrar = new Button();
             btnCadastrar.Text = "Criar nova conta";
-            btnCadastrar.Location = new Point(40, 345);
+            btnCadastrar.Location = new Point(40, 355);
             btnCadastrar.Width = 320;
             btnCadastrar.Height = 34;
             btnCadastrar.FlatStyle = FlatStyle.Flat;
@@ -187,7 +200,7 @@ namespace ProjetoLogistica
             lblDica.Font = new Font("Segoe UI", 9F, FontStyle.Italic);
             lblDica.ForeColor = Color.Gray;
             lblDica.AutoSize = true;
-            lblDica.Location = new Point(40, 388);
+            lblDica.Location = new Point(40, 398);
             card.Controls.Add(lblDica);
 
             this.AcceptButton = btnEntrar;
@@ -362,3 +375,4 @@ namespace ProjetoLogistica
         }
     }
 }
+
