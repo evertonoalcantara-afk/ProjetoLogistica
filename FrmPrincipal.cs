@@ -90,6 +90,7 @@ namespace ProjetoLogistica
         private CheckBox chkViaEmAndamento;
         private ComboBox cmbViaSituacao;
         private DataGridView gridVia;
+        private TextBox txtViaCusto;
 
         // ============================================================
         // CAMPOS DA ABA CONSULTA / MONITORAMENTO
@@ -186,7 +187,7 @@ namespace ProjetoLogistica
 
             this.MainMenuStrip = menu;
             this.Controls.Add(menu);
-        } // <--- ESSA CHAVE É OBRIGATÓRIA PARA FECHAR O MontarMenu()
+        } 
 
         // ============================================================
         // ABAS
@@ -1663,6 +1664,20 @@ namespace ProjetoLogistica
             cmbViaSituacao.SelectedIndex = 0;
             painel.Controls.Add(cmbViaSituacao);
 
+            Lbl("Custo Estimado (R$):", 340, 265, painel);
+            txtViaCusto = Txt(490, 262, 130, painel, true); // true = só leitura
+            txtViaCusto.Text = "0,00";
+
+            // Botão para calcular o custo
+            Button btnCalcularCusto = new Button();
+            btnCalcularCusto.Text = "Calcular Custo";
+            btnCalcularCusto.Location = new Point(630, 261);
+            btnCalcularCusto.Width = 120;
+            btnCalcularCusto.Height = 28;
+            Estilo.Botao(btnCalcularCusto, Estilo.Lilas);
+            btnCalcularCusto.Click += (s, e) => CalcularCustoViagem();
+            painel.Controls.Add(btnCalcularCusto);
+
             gridVia = NovaGrid();
             gridVia.CellClick += (s, e) =>
             {
@@ -1828,6 +1843,72 @@ namespace ProjetoLogistica
             {
                 MessageBox.Show("Erro: " + ex.Message,
                     "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // ============================================================
+        // ANOTAÇÃO:
+        // Busca a distância, o consumo e o preço do diesel no banco
+        // e faz a conta: Custo = (Distancia / Consumo) * Preco
+        // ============================================================
+        private void CalcularCustoViagem()
+        {
+            if (cmbViaVeiculo.SelectedValue == null || cmbViaRota.SelectedValue == null)
+            {
+                MessageBox.Show("Selecione o Veículo e a Rota primeiro.", "Atenção",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                using (MySqlConnection conn = Conexao.Abrir())
+                {
+                    // 1. Pega o Consumo do Veículo
+                    decimal consumo = 0;
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT consumo_medio FROM veiculo WHERE veiculoID = @id", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@id", cmbViaVeiculo.SelectedValue);
+                        consumo = Convert.ToDecimal(cmd.ExecuteScalar());
+                    }
+
+                    // 2. Pega a Distância da Rota
+                    decimal distancia = 0;
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT distancia FROM rota WHERE rotaID = @id", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@id", cmbViaRota.SelectedValue);
+                        distancia = Convert.ToDecimal(cmd.ExecuteScalar());
+                    }
+
+                    // 3. Pega o preço mais recente do combustível
+                    decimal precoCombustivel = 0;
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT preco FROM preco_combustivel ORDER BY data_consulta DESC LIMIT 1", conn))
+                    {
+                        object result = cmd.ExecuteScalar();
+                        if (result != null) precoCombustivel = Convert.ToDecimal(result);
+                    }
+
+                    // Validações de segurança (pra não dividir por zero)
+                    if (consumo <= 0) { MessageBox.Show("O veículo não tem consumo médio cadastrado.", "Erro"); return; }
+                    if (precoCombustivel <= 0) { MessageBox.Show("Nenhum preço de combustível cadastrado no sistema.", "Erro"); return; }
+
+                    // 4. Faz a conta
+                    decimal custoTotal = (distancia / consumo) * precoCombustivel;
+
+                    // 5. Mostra na tela
+                    txtViaCusto.Text = custoTotal.ToString("N2");
+
+                    MessageBox.Show($"Cálculo realizado:\n\n" +
+                                    $"Distância: {distancia:N0} km\n" +
+                                    $"Consumo do Veículo: {consumo:N1} km/L\n" +
+                                    $"Preço do Diesel: R$ {precoCombustivel:N2}\n\n" +
+                                    $"Custo Estimado: R$ {custoTotal:N2}",
+                                    "Detalhes do Cálculo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Erro ao calcular: " + ex.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
