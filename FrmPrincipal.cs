@@ -137,38 +137,56 @@ namespace ProjetoLogistica
             menu.ForeColor = Color.White;
             menu.Font = new Font("Segoe UI Semibold", 10F);
             menu.Padding = new Padding(10, 6, 10, 6);
-
+            // Deixa o fundo do menu suspenso índigo
+            menu.Renderer = new ToolStripProfessionalRenderer(new CustomColorTable());
             ToolStripMenuItem menuArquivo = new ToolStripMenuItem("Arquivo");
             menuArquivo.ForeColor = Color.White;
 
-            ToolStripMenuItem menuSair = new ToolStripMenuItem("  Sair");
-            menuSair.ForeColor = Color.White;
+            // ============================================================
+            // OPÇÃO 1: TROCAR DE USUÁRIO (LOGOUT)
+            // ============================================================
+            ToolStripMenuItem menuLogout = new ToolStripMenuItem("  Trocar de Usuário (Logout)");
+            menuLogout.Click += (s, e) => FazerLogout();
+            menuArquivo.DropDownItems.Add(menuLogout);
+
+            // Linha separadora
+            menuArquivo.DropDownItems.Add(new ToolStripSeparator());
+
+            // ============================================================
+            // OPÇÃO 2: FECHAR O SISTEMA DE VEZ
+            // ============================================================
+            ToolStripMenuItem menuSair = new ToolStripMenuItem("  Fechar Sistema");
             menuSair.Click += (s, e) =>
             {
                 DialogResult r = MessageBox.Show(
-                    "Tem certeza que quer sair?",
+                    "Deseja realmente fechar o sistema?",
                     "Confirmação",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Question);
 
                 if (r == DialogResult.Yes)
+                {
+                    Log.Info("Sistema fechado pelo usuário.");
                     Application.Exit();
+                }
             };
             menuArquivo.DropDownItems.Add(menuSair);
+
+            // Adiciona o menu "Arquivo" na barra principal
             menu.Items.Add(menuArquivo);
 
-            // ANOTAÇÃO: usei ToolStripLabel em vez de MenuItem porque o MenuItem
-            // com Enabled=false força o texto a ficar cinza no Windows.
-            // O Label respeita a cor que a gente escolhe. 
+            // ============================================================
+            // NOME DO USUÁRIO (Canto direito)
+            // ============================================================
             ToolStripLabel itemUsuario = new ToolStripLabel("👤  " + Session.Usuario + "  ·  " + Session.Perfil);
-            itemUsuario.ForeColor = Color.White;  // Branco puro pra dar contraste
-            itemUsuario.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);  // Negrito
+            itemUsuario.ForeColor = Color.White;
+            itemUsuario.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
             itemUsuario.Alignment = ToolStripItemAlignment.Right;
             menu.Items.Add(itemUsuario);
 
             this.MainMenuStrip = menu;
             this.Controls.Add(menu);
-        }
+        } // <--- ESSA CHAVE É OBRIGATÓRIA PARA FECHAR O MontarMenu()
 
         // ============================================================
         // ABAS
@@ -343,14 +361,6 @@ namespace ProjetoLogistica
             }
             return true;
         }
-
-        // ============================================================
-        // ═══════════════════ ABA DASHBOARD ═════════════════════════
-        // ============================================================
-        // ANOTAÇÃO:
-        // Essa aba é só leitura. Ela mostra os números do sistema
-        // em cards coloridos. Os dados vêm direto do banco.
-        // ============================================================
         private TabPage CriarAbaDashboard()
         {
             TabPage pagina = NovaAba("Dashboard");
@@ -371,65 +381,34 @@ namespace ProjetoLogistica
             lblKpiVeiculos = CriarCard(painelKpis, "🚛 Veículos", "0", Estilo.LilasEscuro, 940);
 
             // ============================================================
-            // 2. ÁREA DOS GRÁFICOS (embaixo)
+            // 2. PAINEL DE BOAS-VINDAS (embaixo)
             // ============================================================
-            // TableLayoutPanel divide o espaço em 2 colunas iguais
-            TableLayoutPanel painelGraficos = new TableLayoutPanel();
-            painelGraficos.Dock = DockStyle.Fill;
-            painelGraficos.ColumnCount = 2;
-            painelGraficos.RowCount = 1;
-            painelGraficos.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            painelGraficos.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            painelGraficos.Padding = new Padding(10);
+            Panel painelBemVindo = new Panel();
+            painelBemVindo.Dock = DockStyle.Fill;
+            painelBemVindo.BackColor = Color.White;
+            painelBemVindo.Padding = new Padding(40);
 
-            // Card do Gráfico de Pizza
-            Panel cardPizza = new Panel();
-            cardPizza.Dock = DockStyle.Fill;
-            cardPizza.BackColor = Color.White;
-            cardPizza.Margin = new Padding(5);
+            Label lblTituloBemVindo = new Label();
+            lblTituloBemVindo.Text = "Bem-vindo(a) ao Rota+ 🚀";
+            lblTituloBemVindo.Font = new Font("Segoe UI Black", 32F);
+            lblTituloBemVindo.ForeColor = Estilo.IndigoEscuro;
+            lblTituloBemVindo.AutoSize = true;
+            lblTituloBemVindo.Location = new Point(40, 50);
+            painelBemVindo.Controls.Add(lblTituloBemVindo);
 
-            Label lblTituloPizza = new Label();
-            lblTituloPizza.Text = "Viagens por Situação";
-            lblTituloPizza.Font = new Font("Segoe UI Semibold", 12F);
-            lblTituloPizza.ForeColor = Estilo.IndigoEscuro;
-            lblTituloPizza.Dock = DockStyle.Top;
-            lblTituloPizza.Height = 30;
-            lblTituloPizza.TextAlign = ContentAlignment.MiddleCenter;
+            Label lblSubBemVindo = new Label();
+            lblSubBemVindo.Text = "Seu sistema de gerenciamento logístico está pronto para uso.\n\n" +
+                                  "Use as abas acima para cadastrar veículos, gerenciar motoristas, \n" +
+                                  "criar rotas e acompanhar as viagens em tempo real.\n\n" +
+                                  "Este painel resume os dados gerais do seu banco de dados.";
+            lblSubBemVindo.Font = new Font("Segoe UI", 14F);
+            lblSubBemVindo.ForeColor = Estilo.TextoEscuro;
+            lblSubBemVindo.AutoSize = true;
+            lblSubBemVindo.Location = new Point(45, 130);
+            painelBemVindo.Controls.Add(lblSubBemVindo);
 
-            GraficoPizza graficoPizza = new GraficoPizza();
-            graficoPizza.Dock = DockStyle.Fill;
-            graficoPizza.Name = "graficoPizza"; // Nome pra achar depois
-
-            cardPizza.Controls.Add(graficoPizza);
-            cardPizza.Controls.Add(lblTituloPizza);
-
-            // Card do Gráfico de Barras
-            Panel cardBarra = new Panel();
-            cardBarra.Dock = DockStyle.Fill;
-            cardBarra.BackColor = Color.White;
-            cardBarra.Margin = new Padding(5);
-
-            Label lblTituloBarra = new Label();
-            lblTituloBarra.Text = "Viagens nos Últimos 6 Meses";
-            lblTituloBarra.Font = new Font("Segoe UI Semibold", 12F);
-            lblTituloBarra.ForeColor = Estilo.IndigoEscuro;
-            lblTituloBarra.Dock = DockStyle.Top;
-            lblTituloBarra.Height = 30;
-            lblTituloBarra.TextAlign = ContentAlignment.MiddleCenter;
-
-            GraficoBarras graficoBarras = new GraficoBarras();
-            graficoBarras.Dock = DockStyle.Fill;
-            graficoBarras.Name = "graficoBarras"; // Nome pra achar depois
-
-            cardBarra.Controls.Add(graficoBarras);
-            cardBarra.Controls.Add(lblTituloBarra);
-
-            // Adiciona os cards no layout
-            painelGraficos.Controls.Add(cardPizza, 0, 0);
-            painelGraficos.Controls.Add(cardBarra, 1, 0);
-
-            // Adiciona tudo na página
-            pagina.Controls.Add(painelGraficos);
+            // Adiciona na tela
+            pagina.Controls.Add(painelBemVindo);
             pagina.Controls.Add(painelKpis);
 
             // Atualiza os dados quando a aba abre
@@ -464,52 +443,6 @@ namespace ProjetoLogistica
 
                     using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM veiculo", conn))
                         lblKpiVeiculos.Text = Convert.ToInt64(cmd.ExecuteScalar()).ToString();
-
-                    // --- Dados do Gráfico de Pizza (Viagens por Situação) ---
-                    var dadosPizza = new System.Collections.Generic.Dictionary<string, decimal>();
-                    using (MySqlCommand cmd = new MySqlCommand("SELECT situacao, COUNT(*) FROM viagem GROUP BY situacao", conn))
-                    using (MySqlDataReader rd = cmd.ExecuteReader())
-                    {
-                        while (rd.Read())
-                        {
-                            dadosPizza[rd.GetString(0)] = rd.GetInt32(1);
-                        }
-                    }
-
-                    // --- Dados do Gráfico de Barras (Viagens por Mês) ---
-                    var dadosBarras = new System.Collections.Generic.Dictionary<string, decimal>();
-                    // Agrupa pelos últimos 6 meses e formata o nome do mês (ex: "Out/26")
-                    string sqlMeses = @"
-                SELECT DATE_FORMAT(data_saida, '%b/%y') AS mes, COUNT(*) 
-                FROM viagem 
-                WHERE data_saida >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-                GROUP BY YEAR(data_saida), MONTH(data_saida), mes
-                ORDER BY YEAR(data_saida), MONTH(data_saida)";
-
-                    using (MySqlCommand cmd = new MySqlCommand(sqlMeses, conn))
-                    using (MySqlDataReader rd = cmd.ExecuteReader())
-                    {
-                        while (rd.Read())
-                        {
-                            dadosBarras[rd.GetString(0)] = rd.GetInt32(1);
-                        }
-                    }
-
-                    // --- Aplica os dados nos controles ---
-                    // Uso Find pra achar os controles em qualquer nível da tela
-                    Control[] foundPizza = this.Controls.Find("graficoPizza", true);
-                    if (foundPizza.Length > 0 && foundPizza[0] is GraficoPizza pizza)
-                    {
-                        pizza.Dados = dadosPizza;
-                        pizza.Invalidate(); // Força redesenhar
-                    }
-
-                    Control[] foundBarras = this.Controls.Find("graficoBarras", true);
-                    if (foundBarras.Length > 0 && foundBarras[0] is GraficoBarras barras)
-                    {
-                        barras.Dados = dadosBarras;
-                        barras.Invalidate(); // Força redesenhar
-                    }
                 }
             }
             catch (MySqlException)
@@ -2419,5 +2352,36 @@ namespace ProjetoLogistica
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+
+        // ============================================================
+        // MÉTODO DE LOGOUT (Trocar de usuário)
+        // ============================================================
+        private void FazerLogout()
+        {
+            DialogResult resp = MessageBox.Show(
+                "Deseja realmente sair da sua conta?",
+                "Confirmar Saída",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (resp == DialogResult.Yes)
+            {
+                Session.Usuario = "";
+                Session.Perfil = "";
+                Log.Info("Logout realizado pelo usuário.");
+
+                // Reinicia o sistema, caindo na tela de login
+                Application.Restart();
+            }
+        }
+    }
+
+    // Classe auxiliar pra pintar o menu suspenso
+    public class CustomColorTable : ProfessionalColorTable
+    {
+        public override Color MenuItemSelected => Estilo.Lilas;
+        public override Color MenuItemBorder => Estilo.Lilas;
+        public override Color ToolStripDropDownBackground => Estilo.Indigo;
     }
 }
