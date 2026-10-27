@@ -1806,10 +1806,13 @@ namespace ProjetoLogistica
             {
                 using (MySqlConnection conn = Conexao.Abrir())
                 {
-                    string sql = @"INSERT INTO viagem 
-                                   (veiculoID, motoristaID, rotaID, 
-                                    data_saida, data_chegada, situacao)
-                                   VALUES (@vei, @mot, @rot, @saida, @chegada, @situacao)";
+                    string sql = @"UPDATE viagem 
+               SET veiculoID = @vei, motoristaID = @mot, rotaID = @rot,
+                   data_saida = @saida, data_chegada = @chegada, situacao = @situacao,
+                   custo_estimado = @custo
+               WHERE viagemID = @id";
+
+
 
                     using (MySqlCommand cmd = new MySqlCommand(sql, conn))
                     {
@@ -1817,6 +1820,7 @@ namespace ProjetoLogistica
                         cmd.Parameters.AddWithValue("@mot", cmbViaMotorista.SelectedValue);
                         cmd.Parameters.AddWithValue("@rot", cmbViaRota.SelectedValue);
                         cmd.Parameters.AddWithValue("@saida", dtpViaSaida.Value);
+                        cmd.Parameters.AddWithValue("@custo", decimal.Parse(txtViaCusto.Text));
 
                         // ANOTAÇÃO: se a viagem tá em andamento, a data
                         // de chegada vai como NULL no banco. Pra isso,
@@ -1926,13 +1930,11 @@ namespace ProjetoLogistica
                 using (MySqlConnection conn = Conexao.Abrir())
                 {
                     string sql = @"UPDATE viagem 
-                                   SET veiculoID = @vei,
-                                       motoristaID = @mot,
-                                       rotaID = @rot,
-                                       data_saida = @saida,
-                                       data_chegada = @chegada,
-                                       situacao = @situacao
-                                   WHERE viagemID = @id";
+                    SET veiculoID = @vei, motoristaID = @mot, rotaID = @rot,
+                   data_saida = @saida, data_chegada = @chegada, situacao = @situacao,
+                   custo_estimado = @custo
+                    WHERE viagemID = @id";
+                    
 
                     using (MySqlCommand cmd = new MySqlCommand(sql, conn))
                     {
@@ -1941,6 +1943,7 @@ namespace ProjetoLogistica
                         cmd.Parameters.AddWithValue("@mot", cmbViaMotorista.SelectedValue);
                         cmd.Parameters.AddWithValue("@rot", cmbViaRota.SelectedValue);
                         cmd.Parameters.AddWithValue("@saida", dtpViaSaida.Value);
+                        cmd.Parameters.AddWithValue("@custo", decimal.Parse(txtViaCusto.Text));
 
                         if (chkViaEmAndamento.Checked)
                             cmd.Parameters.AddWithValue("@chegada", DBNull.Value);
@@ -2019,13 +2022,14 @@ namespace ProjetoLogistica
                     // JOIN pra trazer os nomes em vez de só os IDs.
                     // Fica mais amigável pro usuário final.
                     string sql = @"
-                        SELECT v.viagemID,
+                        SELECT v.viagemID AS ID,
                                ve.placa AS Veiculo,
                                mo.nome AS Motorista,
                                CONCAT(r.origem, ' → ', r.destino) AS Rota,
-                               v.data_saida,
-                               v.data_chegada,
-                               v.situacao
+                               v.data_saida AS Saida,
+                               v.data_chegada AS Chegada,
+                               v.situacao AS Status,
+                               v.custo_estimado AS Custo
                         FROM viagem v
                         JOIN veiculo ve ON ve.veiculoID = v.veiculoID
                         JOIN motorista mo ON mo.motoristaID = v.motoristaID
@@ -2037,6 +2041,11 @@ namespace ProjetoLogistica
                         DataTable tabela = new DataTable();
                         da.Fill(tabela);
                         gridVia.DataSource = tabela;
+
+                        if (gridVia.Columns["Custo"] != null)
+                        {
+                            gridVia.Columns["Custo"].DefaultCellStyle.Format = "C2";
+                        }
                     }
                 }
             }
